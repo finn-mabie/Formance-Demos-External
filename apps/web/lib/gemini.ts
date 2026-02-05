@@ -7,7 +7,7 @@ export async function callGemini(systemPrompt: string, userPrompt: string): Prom
     throw new Error('GEMINI_API_KEY not configured');
   }
 
-  const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+  const model = genAI.getGenerativeModel({ model: 'gemini-3-pro-preview' });
 
   const chat = model.startChat({
     history: [
