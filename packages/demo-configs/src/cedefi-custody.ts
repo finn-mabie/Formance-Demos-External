@@ -161,12 +161,12 @@ set_tx_meta("chain_tx", "0x7b2e...f943")`,
       txType: 'DEPOSITS_CONFIRMED',
       label: 'Deposits Confirmed',
       description: 'Block confirmations received - funds now available for deployment',
-      numscript: `send [ETH/18 *] (
+      numscript: `send [ETH/18 10000000000000000000] (
   source = @clients:{FUND_NAME}:trader:{TRADER_NAME}:pending
   destination = @clients:{FUND_NAME}:trader:{TRADER_NAME}:idle
 )
 
-send [USDC/6 *] (
+send [USDC/6 50000000000] (
   source = @clients:{FUND_NAME}:trader:{TRADER_NAME}:pending
   destination = @clients:{FUND_NAME}:trader:{TRADER_NAME}:idle
 )
