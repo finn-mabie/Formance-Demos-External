@@ -108,40 +108,57 @@ set_account_meta(@user, "status", "active")
 
 ## Account Naming Conventions
 
-### CRITICAL RULES:
-1. **Use colons for ALL separation** - NEVER underscores in account names
-   - WRONG: \`@interco:ph:owed_to_ph\`
-   - RIGHT: \`@interco:ph:debt\`
+### CRITICAL RULES (MUST FOLLOW - NO EXCEPTIONS):
 
-2. **IDs must be colon-separated** (enables aggregation with :: wildcard)
-   - WRONG: \`@customers:cust001\`
-   - RIGHT: \`@customers:001\`
+1. **NEVER USE UNDERSCORES** - Use colons for ALL word/segment separation
+   - WRONG: \`@platform:fx_spread\` ❌
+   - WRONG: \`@platform:premium_services\` ❌
+   - WRONG: \`@banks:us:bank_account\` ❌
+   - RIGHT: \`@platform:fx:spread\` ✓
+   - RIGHT: \`@platform:premium\` ✓
+   - RIGHT: \`@banks:us:operating\` ✓
 
-3. **Accounts are multi-asset** - NEVER include asset type in names
-   - WRONG: \`@users:alice:usd:available\`
-   - RIGHT: \`@users:alice:available\` (holds USD, USDC, BTC, etc.)
+2. **IDs MUST be colon-separated from their category** - Numbers/IDs get their own segment
+   - WRONG: \`@customers:user001:available\` ❌ (user001 has no colon before the number)
+   - WRONG: \`@banks:us:bank001:operating\` ❌ (bank001 combines word and number)
+   - WRONG: \`@exchanges:xch001\` ❌
+   - RIGHT: \`@customers:001:available\` ✓
+   - RIGHT: \`@banks:us:001:operating\` ✓
+   - RIGHT: \`@exchanges:001\` ✓
 
-4. **Per-customer custody accounts** (not shared treasury)
-   - WRONG: \`@treasury:fireblocks:hot\` (all mixed)
-   - RIGHT: \`@customers:001:fireblocks:hot\` (per customer)
+3. **Use simple, short segment names** - Don't concatenate words
+   - WRONG: \`@platform:transactionfees\` ❌
+   - WRONG: \`@treasury:workingcapital\` ❌
+   - RIGHT: \`@platform:fees\` ✓
+   - RIGHT: \`@treasury:float\` ✓
 
-5. **No double counting** - customer accounts ARE the omnibus total
+4. **Accounts are multi-asset** - NEVER include currency/asset in account names
+   - WRONG: \`@users:alice:usd:available\` ❌
+   - RIGHT: \`@users:alice:available\` ✓ (holds USD, EUR, BTC, etc.)
 
-### Standard Categories
-- \`@customers:{ID}:\` - End-user accounts
-- \`@merchants:{ID}:\` - Seller/vendor accounts
-- \`@platform:\` - Company operational accounts (revenue, fees, expenses)
-- \`@treasury:\` - Cash management accounts
-- \`@banks:{NAME}:\` - Bank integration accounts
-- \`@psp:{NAME}:\` - Payment processor accounts
-- \`@exchanges:{ID}\` - FX conversion tracking (use overdraft)
-- \`@interco:{ENTITY}:\` - Intercompany accounts
+5. **Use {VARIABLE_NAME} placeholders for dynamic IDs**
+   - RIGHT: \`@customers:{CUSTOMER_ID}:available\` ✓
+   - RIGHT: \`@merchants:{MERCHANT_ID}:pending\` ✓
+   - RIGHT: \`@escrow:{ORDER_ID}\` ✓
 
-### Common Subtypes
+### Standard Account Patterns
+- \`@customers:{CUSTOMER_ID}:available\` - Customer spendable balance
+- \`@customers:{CUSTOMER_ID}:pending\` - Customer pending funds
+- \`@merchants:{MERCHANT_ID}:available\` - Merchant balance
+- \`@platform:fees\` - Platform fee revenue
+- \`@platform:commission\` - Platform commission revenue
+- \`@treasury:float\` - Working capital
+- \`@banks:{BANK_NAME}:operating\` - Bank operating account
+- \`@psp:{PSP_NAME}\` - Payment processor (use overdraft)
+- \`@exchanges:{CONVERSION_ID}\` - FX tracking (use overdraft)
+- \`@escrow:{ORDER_ID}\` - Escrow holding
+
+### Common Subtypes (single words only)
 - \`:available\` - Funds available for use
-- \`:pending\` or \`:pending:{type}\` - Awaiting confirmation
+- \`:pending\` - Awaiting confirmation
+- \`:operating\` - Operational account
 - \`:hot\` / \`:cold\` - Custody wallet type
-- \`:debt\` / \`:credit\` - Intercompany obligations
+- \`:debt\` / \`:credit\` - Obligations
 
 ## Common Flow Patterns
 

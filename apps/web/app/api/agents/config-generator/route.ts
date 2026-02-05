@@ -21,6 +21,19 @@ Take all the pieces from the previous agents (accounts, transaction steps with n
 6. **Add 3-5 useful queries** - balance checks, transaction history, account listings
 7. **DO NOT include @world in accounts** - it's implicit
 
+## CRITICAL: Validate Account Addresses
+
+Before outputting, verify EVERY account address follows these rules:
+- NO underscores anywhere (use colons instead)
+- IDs use {VARIABLE_NAME} format like {CUSTOMER_ID}
+- Each segment is a single short word
+- No currency/asset in account names
+
+WRONG examples to avoid:
+- @platform:fx_spread ❌ → use @platform:fx:spread
+- @customers:user001:available ❌ → use @customers:{CUSTOMER_ID}:available
+- @banks:us:bank001:operating ❌ → use @banks:{BANK_ID}:operating
+
 ## Query Types
 
 Balance query:

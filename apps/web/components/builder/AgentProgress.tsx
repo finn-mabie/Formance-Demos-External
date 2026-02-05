@@ -106,14 +106,7 @@ export function AgentProgress({ agents }: AgentProgressProps) {
               </div>
             </div>
 
-            {agent.status === 'completed' && agent.output !== undefined ? (
-              <button
-                onClick={() => console.log(agent.output)}
-                className="text-sm text-primary hover:text-primary/80"
-              >
-                View Output
-              </button>
-            ) : null}
+{/* Status indicator only - no action needed */}
           </div>
         ))}
       </div>

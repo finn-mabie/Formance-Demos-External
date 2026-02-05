@@ -9,13 +9,28 @@ ${FORMANCE_CONTEXT}
 
 Design a chart of accounts for a Formance Ledger demo based on the research analysis provided.
 
-## Critical Rules (MUST FOLLOW)
+## ABSOLUTE REQUIREMENTS (VIOLATIONS WILL CAUSE ERRORS)
 
-1. **Use colons for ALL separation** - NEVER use underscores in account names
-2. **Use {VARIABLE_NAME} for dynamic IDs** - like {CUSTOMER_ID}, {ORDER_ID}
-3. **Accounts are multi-asset** - NEVER put currency/asset in account name
-4. **Per-entity accounts** - NOT shared pools
-5. **Clear naming** - Anyone should understand what the account is for
+1. **NEVER USE UNDERSCORES** - Use colons for ALL separation. This is critical.
+   - WRONG: @platform:fx_spread ❌
+   - WRONG: @platform:premium_services ❌
+   - RIGHT: @platform:fx:spread ✓
+   - RIGHT: @platform:premium ✓
+
+2. **IDs must be separate segments** - Numbers/IDs get their own colon-separated segment
+   - WRONG: @customers:user001:available ❌
+   - WRONG: @banks:bank001:operating ❌
+   - RIGHT: @customers:{CUSTOMER_ID}:available ✓
+   - RIGHT: @banks:{BANK_ID}:operating ✓
+
+3. **Use {VARIABLE_NAME} placeholders** - For any dynamic ID
+   - Use: {CUSTOMER_ID}, {MERCHANT_ID}, {ORDER_ID}, {BANK_ID}, etc.
+
+4. **Keep segment names short and simple** - Single words, no concatenation
+   - WRONG: @platform:transactionfees ❌
+   - RIGHT: @platform:fees ✓
+
+5. **Accounts are multi-asset** - NEVER put currency in account name
 6. **DO NOT include @world** - it's implicit in the system
 
 ## Output Format
@@ -32,20 +47,40 @@ Respond with a valid JSON object (no markdown, just raw JSON):
       "purpose": "customer"
     },
     {
-      "address": "@platform:revenue",
-      "name": "Platform Revenue",
-      "description": "Fees and commissions earned by the platform",
+      "address": "@merchants:{MERCHANT_ID}:available",
+      "name": "Merchant Balance",
+      "description": "Funds available for the merchant",
+      "color": "orange",
+      "purpose": "merchant"
+    },
+    {
+      "address": "@platform:fees",
+      "name": "Platform Fees",
+      "description": "Transaction fees earned by the platform",
       "color": "emerald",
       "purpose": "platform"
+    },
+    {
+      "address": "@psp:stripe",
+      "name": "Stripe PSP",
+      "description": "Payment processor integration account",
+      "color": "slate",
+      "purpose": "external"
     }
   ],
   "variables": {
     "CUSTOMER_ID": "001",
-    "MERCHANT_ID": "acme",
-    "ORDER_ID": "ORD001"
+    "MERCHANT_ID": "001",
+    "ORDER_ID": "001"
   },
   "rationale": "Brief explanation of why accounts are structured this way"
 }
+
+## VALIDATION CHECKLIST (check your output against this):
+- [ ] No underscores anywhere in account addresses
+- [ ] All IDs use {VARIABLE_NAME} format
+- [ ] Each segment is a single word (no concatenated words)
+- [ ] No currency in account names
 
 ## Account Colors
 - Customer accounts: blue, sky, cyan
