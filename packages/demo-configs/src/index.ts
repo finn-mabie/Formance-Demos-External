@@ -1,7 +1,4 @@
 export { crossBorderRemittanceConfig } from './cross-border-remittance';
-export { wealthManagementConfig } from './wealth-management';
-export { corporateCardsConfig } from './corporate-cards';
-export { digitalWalletConfig } from './digital-wallet';
 export { cedefiCustodyConfig } from './cedefi-custody';
 export { stablecoinIssuanceConfig } from './stablecoin-issuance';
 
@@ -19,9 +16,6 @@ export {
 } from './types';
 
 import { crossBorderRemittanceConfig } from './cross-border-remittance';
-import { wealthManagementConfig } from './wealth-management';
-import { corporateCardsConfig } from './corporate-cards';
-import { digitalWalletConfig } from './digital-wallet';
 import { cedefiCustodyConfig } from './cedefi-custody';
 import { stablecoinIssuanceConfig } from './stablecoin-issuance';
 import { DemoConfig } from './types';
@@ -31,9 +25,6 @@ import { DemoConfig } from './types';
  */
 export const DEMO_CONFIGS: Record<string, DemoConfig> = {
   'cross-border-remittance': crossBorderRemittanceConfig,
-  'wealth-management': wealthManagementConfig,
-  'corporate-cards': corporateCardsConfig,
-  'digital-wallet': digitalWalletConfig,
   'cedefi-custody': cedefiCustodyConfig,
   'stablecoin-issuance': stablecoinIssuanceConfig,
 };
