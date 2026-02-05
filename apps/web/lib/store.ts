@@ -193,14 +193,15 @@ export const useDemoStore = create<DemoState>()((set, get) => ({
     if (config) {
       resetLedgerInstance();
       const ledger = getLedger(config.id);
-      set({
+      set((state) => ({
         ledger,
         currentStep: -1,
         executedSteps: new Set(),
         transactions: [],
         queryResults: new Map(),
         error: null,
-      });
+        balanceVersion: state.balanceVersion + 1,
+      }));
     }
   },
 
