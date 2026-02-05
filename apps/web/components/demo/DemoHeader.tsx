@@ -1,11 +1,13 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
 import { useDemoStore } from '@/lib/store';
-import { Play, Trash2, X, Layers } from 'lucide-react';
+import { Play, Trash2, X, Layers, AlertTriangle } from 'lucide-react';
 
 export function DemoHeader() {
   const { config, reset, goToStep } = useDemoStore();
+  const [showClearModal, setShowClearModal] = useState(false);
 
   if (!config) return null;
 
@@ -14,9 +16,12 @@ export function DemoHeader() {
   };
 
   const handleClear = () => {
-    if (confirm('Clear all data and restart the demo?')) {
-      reset();
-    }
+    setShowClearModal(true);
+  };
+
+  const confirmClear = () => {
+    reset();
+    setShowClearModal(false);
   };
 
   return (
@@ -56,6 +61,52 @@ export function DemoHeader() {
           Exit Demo
         </Link>
       </div>
+
+      {/* Clear Ledger Confirmation Modal */}
+      {showClearModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+            onClick={() => setShowClearModal(false)}
+          />
+
+          {/* Modal */}
+          <div className="relative bg-card border border-border rounded-xl shadow-2xl max-w-md w-full mx-4 p-6">
+            <div className="flex items-start gap-4">
+              <div className="flex-shrink-0 w-12 h-12 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
+                <AlertTriangle className="w-6 h-6 text-amber-600 dark:text-amber-500" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-semibold text-foreground mb-2">
+                  Clear the Ledger?
+                </h3>
+                <p className="text-sm text-muted-foreground mb-1">
+                  We know ledgers should be immutable, but this is just for demo purposes.
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  This will reset all balances and transactions so you can start fresh.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 mt-6">
+              <button
+                onClick={() => setShowClearModal(false)}
+                className="btn-outline btn-sm"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmClear}
+                className="btn-sm bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+              >
+                Clear Ledger
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </header>
   );
 }
