@@ -9,11 +9,37 @@ ${FORMANCE_CONTEXT}
 
 Design the transaction steps for a demo. Each step represents a business event that triggers ledger postings.
 
+## CRITICAL RULES
+
+### Rule 1: ONE EVENT = ONE STEP
+Each distinct business event MUST be a SEPARATE step. Never combine multiple events.
+
+WRONG ❌: "Fund deposits 500 ETH and 10M USDC" as ONE step
+RIGHT ✓:
+- Step 1: "Fund Deposits ETH" (500 ETH)
+- Step 2: "Fund Deposits USDC" (10M USDC)
+
+Different assets = different blockchain transactions = SEPARATE STEPS.
+
+### Rule 2: ATOMIC FEES IN SAME STEP
+When a platform takes a fee WITH another action (like staking), those are MULTIPLE postings in ONE step.
+
+Example: "Trader Stakes ETH with Platform Fee"
+- Posting 1: ETH moves from available to staking
+- Posting 2: Fee moves from available to platform fees
+Both happen atomically in ONE step.
+
+### Rule 3: USE REALISTIC AMOUNTS
+Use realistic dollar/crypto amounts that make sense for the use case:
+- Retail: $100, $500, $1,000
+- Institutional: $100,000, $1M, $10M
+- Crypto: 1 ETH, 10 ETH, 500 ETH, 10,000 USDC
+
 ## Guidelines
 
 1. **Design 4-8 transaction steps** that tell a compelling story
-2. **Each step should be a distinct business event** (deposit, transfer, payout, etc.)
-3. **Steps should build on each other** to show a complete flow
+2. **Each step = one business event** (deposit, transfer, stake, etc.)
+3. **Steps should build on each other** logically
 4. **Include realistic metadata** for each transaction
 5. **Use the accounts provided** from the chart of accounts
 
@@ -24,14 +50,14 @@ Respond with a valid JSON object (no markdown, just raw JSON):
 {
   "transactionSteps": [
     {
-      "txType": "DEPOSIT",
-      "label": "Customer Deposits Funds",
-      "description": "Customer deposits $100 into their wallet via bank transfer",
-      "accounts": ["@world", "@customers:{CUSTOMER_ID}:available"],
+      "txType": "ETH_DEPOSIT",
+      "label": "Trader Bob Deposits ETH",
+      "description": "Trader Bob deposits 100 ETH into the custody platform, pending block confirmations",
+      "accounts": ["@world", "@clients:genesis:trader:bob:pending"],
       "metadata": {
         "type": "DEPOSIT",
-        "customer_id": "{CUSTOMER_ID}",
-        "method": "bank_transfer"
+        "asset": "ETH",
+        "trader": "bob"
       }
     }
   ],
@@ -40,22 +66,27 @@ Respond with a valid JSON object (no markdown, just raw JSON):
 
 ## Good Step Sequences
 
+For a **custody/fund** demo:
+1. Fund deposits ETH (pending)
+2. Fund deposits USDC (pending) - SEPARATE STEP for different asset
+3. Deposits confirmed (pending → available)
+4. Trader allocates to exchange
+5. Trader stakes with fee (atomic - one step, two postings)
+6. Staking rewards distributed
+
 For a **wallet** demo:
 1. Customer deposits
-2. Customer makes a purchase (with fee)
+2. Customer makes purchase (with atomic fee)
 3. Merchant receives funds
-4. Merchant withdraws to bank
-
-For a **marketplace** demo:
-1. Buyer funds escrow
-2. Order fulfilled, funds released to seller (minus commission)
-3. Seller withdraws to bank
+4. Merchant withdraws
 
 For a **remittance** demo:
-1. Sender initiates transfer
-2. Currency conversion
-3. Funds sent to recipient country
-4. Recipient receives local currency
+1. Sender initiates USD transfer
+2. USD → USDC conversion
+3. USDC transferred on-chain
+4. USDC → MXN conversion (with FX spread)
+5. MXN payout initiated
+6. Payout confirmed
 `;
 
 export async function POST(request: NextRequest) {

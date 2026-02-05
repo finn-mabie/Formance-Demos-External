@@ -110,6 +110,57 @@ set_tx_meta("customer", "{CUSTOMER_ID}")
 
 ---
 
+## DEMO DESIGN RULES (CRITICAL)
+
+### Rule 1: USE REALISTIC NAMES
+Use real-sounding names for entities, not generic IDs. This makes demos relatable and professional.
+
+WRONG ❌:
+- Variables: "CUSTOMER_ID": "001", "FUND_ID": "fund01"
+- Accounts: @clients:fund01:master, @customers:user001:available
+
+RIGHT ✓:
+- Variables: "FUND_NAME": "genesis", "TRADER_NAME": "bob", "CUSTOMER_NAME": "alice"
+- Accounts: @clients:genesis:master, @clients:genesis:trader:bob:available
+
+Example realistic variable values:
+- Fund names: "genesis", "apex", "meridian", "vanguard"
+- Trader names: "bob", "alice", "carlos", "sarah"
+- Company names: "acme", "northstar", "summit"
+
+### Rule 2: ONE EVENT = ONE STEP
+Each distinct business event should be a SEPARATE transaction step. Do NOT combine multiple events.
+
+WRONG ❌ (combining two events into one step):
+- "Master Fund deposits 500 ETH and 10M USDC" as ONE step
+
+RIGHT ✓ (separate steps for each event):
+- Step 1: "Master Fund Deposits ETH" - 500 ETH deposit
+- Step 2: "Master Fund Deposits USDC" - 10M USDC deposit
+
+Different assets, different blockchain transactions, different settlement times = SEPARATE STEPS.
+
+### Rule 3: ATOMIC FEES IN SAME STEP
+When a platform takes a fee atomically WITH another action, those are multiple send statements in ONE step (one atomic transaction).
+
+Example: Staking request with fee
+\`\`\`numscript
+// Both sends execute atomically - if one fails, both fail
+send [USDC/6 500000000000] (
+  source = @clients:genesis:trader:bob:available
+  destination = @clients:genesis:trader:bob:held:staking:{BATCH_ID}
+)
+send [USDC/6 5000000000] (
+  source = @clients:genesis:trader:bob:available
+  destination = @zodia:fees
+)
+set_tx_meta("type", "STAKING_LOCK")
+\`\`\`
+
+This creates ONE transaction with TWO postings (two arrows in diagram), executed atomically.
+
+---
+
 ## ACCOUNT NAMING RULES (CRITICAL - MUST FOLLOW)
 
 ### Rule 1: NEVER USE UNDERSCORES
@@ -425,27 +476,127 @@ send [USDC/6 *] (
 
 ---
 
-### 5. DIGITAL WALLET / NEOBANK
+### 5. CUSTODY / MULTI-MANAGER FUND (Zodia-style)
+
+A hedge fund with multiple traders needs virtual account segregation within an omnibus custody wallet.
+
+**Key Concepts**:
+- Pending → Available flow (waiting for block confirmations)
+- Trader-level allocation to exchanges (Deribit, Bybit)
+- Real-time reallocation between exchanges
+- Staking with atomic fee recognition
+
+**Accounts** (using realistic names):
+- \`@clients:{FUND_NAME}:master\` - Fund's master custody account
+- \`@clients:{FUND_NAME}:trader:{TRADER_NAME}:pending\` - Pending deposits (awaiting confirmations)
+- \`@clients:{FUND_NAME}:trader:{TRADER_NAME}:available\` - Confirmed, liquid balance
+- \`@clients:{FUND_NAME}:trader:{TRADER_NAME}:allocated:{EXCHANGE}\` - Reserved for specific exchange
+- \`@clients:{FUND_NAME}:trader:{TRADER_NAME}:held:staking:{BATCH_ID}\` - Locked for staking
+- \`@{CUSTODIAN}:fees\` - Custody platform fees (e.g., @zodia:fees)
+- \`@{CUSTODIAN}:staking:payout\` - Staking rewards pool
+
+**Example Variables**:
+\`\`\`json
+{
+  "FUND_NAME": "genesis",
+  "TRADER_NAME": "bob",
+  "CUSTODIAN": "zodia",
+  "BATCH_ID": "batch001"
+}
+\`\`\`
+
+**Flow**:
+
+1. **ETH Deposit Received** (one asset = one step)
+\`\`\`numscript
+send [ETH/18 500000000000000000000] (
+  source = @world
+  destination = @clients:genesis:trader:bob:pending
+)
+set_tx_meta("type", "DEPOSIT")
+set_tx_meta("asset", "ETH")
+set_tx_meta("chain_tx_id", "0x...")
+\`\`\`
+
+2. **USDC Deposit Received** (separate step for different asset)
+\`\`\`numscript
+send [USDC/6 10000000000000] (
+  source = @world
+  destination = @clients:genesis:trader:bob:pending
+)
+set_tx_meta("type", "DEPOSIT")
+set_tx_meta("asset", "USDC")
+\`\`\`
+
+3. **Deposits Confirmed** (block confirmations received)
+\`\`\`numscript
+send [ETH/18 *] (
+  source = @clients:genesis:trader:bob:pending
+  destination = @clients:genesis:trader:bob:available
+)
+send [USDC/6 *] (
+  source = @clients:genesis:trader:bob:pending
+  destination = @clients:genesis:trader:bob:available
+)
+set_tx_meta("type", "RISK_CLEARANCE")
+\`\`\`
+
+4. **Allocate to Exchange** (trader wants to trade on Deribit)
+\`\`\`numscript
+send [USDC/6 1000000000000] (
+  source = @clients:genesis:trader:bob:available
+  destination = @clients:genesis:trader:bob:allocated:deribit
+)
+set_tx_meta("type", "EXCHANGE_ALLOCATION")
+set_tx_meta("exchange", "deribit")
+\`\`\`
+
+5. **Reallocate Between Exchanges** (instant, no blockchain wait)
+\`\`\`numscript
+send [USDC/6 500000000000] (
+  source = @clients:genesis:trader:bob:allocated:deribit
+  destination = @clients:genesis:trader:bob:allocated:bybit
+)
+set_tx_meta("type", "REALLOCATION")
+\`\`\`
+
+6. **Staking Lock with Fee** (atomic - both succeed or both fail)
+\`\`\`numscript
+send [ETH/18 100000000000000000000] (
+  source = @clients:genesis:trader:bob:available
+  destination = @clients:genesis:trader:bob:held:staking:batch001
+)
+send [ETH/18 1000000000000000000] (
+  source = @clients:genesis:trader:bob:available
+  destination = @zodia:fees
+)
+set_tx_meta("type", "STAKING_LOCK")
+set_tx_meta("lock_period", "30d")
+\`\`\`
+
+---
+
+### 6. DIGITAL WALLET / NEOBANK
 
 Simple wallet with deposits, transfers, and payouts.
 
 **Accounts**:
-- \`@customers:{CUSTOMER_ID}:available\` - Spendable balance
-- \`@customers:{CUSTOMER_ID}:pending\` - Pending transactions
-- \`@merchants:{MERCHANT_ID}:available\` - Merchant balance
+- \`@customers:{CUSTOMER_NAME}:available\` - Spendable balance
+- \`@customers:{CUSTOMER_NAME}:pending\` - Pending transactions
+- \`@merchants:{MERCHANT_NAME}:available\` - Merchant balance
 - \`@platform:fees\` - Transaction fees
 - \`@psp:stripe\` - Payment processor
 
 ---
 
-### 6. MARKETPLACE WITH ESCROW
+### 7. MARKETPLACE WITH ESCROW
 
 Buyer funds order, seller fulfills, platform takes commission.
 
 **Accounts**:
-- \`@buyers:{BUYER_ID}:available\` - Buyer wallet
-- \`@sellers:{SELLER_ID}:available\` - Seller wallet
-- \`@sellers:{SELLER_ID}:pending\` - Pending payout
+- \`@buyers:{BUYER_NAME}:available\` - Buyer wallet
+- \`@sellers:{SELLER_NAME}:available\` - Seller wallet
+- \`@sellers:{SELLER_NAME}:pending\` - Pending payout
 - \`@escrow:{ORDER_ID}\` - Order escrow
 - \`@platform:commission\` - Platform take rate
 
@@ -486,8 +637,9 @@ You must respond with a valid JSON object (no markdown code blocks, just raw JSO
     }
   ],
   "variables": {
-    "CUSTOMER_ID": "001",
-    "ORDER_ID": "ORD001"
+    "CUSTOMER_NAME": "alice",
+    "MERCHANT_NAME": "acme",
+    "ORDER_ID": "order001"
   },
   "transactionSteps": [
     {

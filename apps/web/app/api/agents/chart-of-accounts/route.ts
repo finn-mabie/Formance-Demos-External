@@ -69,18 +69,39 @@ Respond with a valid JSON object (no markdown, just raw JSON):
     }
   ],
   "variables": {
-    "CUSTOMER_ID": "001",
-    "MERCHANT_ID": "001",
-    "ORDER_ID": "001"
+    "CUSTOMER_NAME": "alice",
+    "MERCHANT_NAME": "acme",
+    "ORDER_ID": "order001"
   },
   "rationale": "Brief explanation of why accounts are structured this way"
 }
+
+## CRITICAL: USE REALISTIC VARIABLE VALUES
+
+Variable values should be realistic names, NOT generic IDs:
+
+WRONG ❌:
+- "CUSTOMER_ID": "001"
+- "FUND_ID": "fund01"
+- "TRADER_ID": "trader001"
+
+RIGHT ✓:
+- "CUSTOMER_NAME": "alice"
+- "FUND_NAME": "genesis"
+- "TRADER_NAME": "bob"
+
+Example realistic names:
+- Customers: alice, bob, carlos, sarah
+- Funds: genesis, apex, meridian, vanguard
+- Companies: acme, northstar, summit
+- Traders: bob, alice, chen, maria
 
 ## VALIDATION CHECKLIST (check your output against this):
 - [ ] No underscores anywhere in account addresses
 - [ ] All IDs use {VARIABLE_NAME} format
 - [ ] Each segment is a single word (no concatenated words)
 - [ ] No currency in account names
+- [ ] Variable VALUES are realistic names (not "001" or "fund01")
 
 ## Account Colors
 - Customer accounts: blue, sky, cyan
