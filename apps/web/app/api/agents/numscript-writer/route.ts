@@ -113,14 +113,11 @@ export async function POST(request: NextRequest) {
     userPrompt += '\nWrite correct Numscript for each step. Use realistic amounts.';
 
     const response = await callGemini(NUMSCRIPT_PROMPT, userPrompt);
-    const output = extractJSON(response);
-
-    // Merge numscript into steps
-    const stepsWithNumscript = (output as { stepsWithNumscript: Array<{ txType: string; label: string; description: string; numscript: string }> }).stepsWithNumscript;
+    const output = extractJSON<{ stepsWithNumscript: Array<{ txType: string; label: string; description: string; numscript: string }> }>(response);
 
     return NextResponse.json({
-      ...previousOutput,
-      transactionSteps: stepsWithNumscript,
+      ...(previousOutput || {}),
+      transactionSteps: output.stepsWithNumscript,
     });
   } catch (error) {
     console.error('Numscript writer agent error:', error);

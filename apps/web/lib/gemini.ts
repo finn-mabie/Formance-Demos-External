@@ -27,17 +27,17 @@ export async function callGemini(systemPrompt: string, userPrompt: string): Prom
   return response.text();
 }
 
-export function extractJSON(text: string): unknown {
+export function extractJSON<T = Record<string, unknown>>(text: string): T {
   // Try to find JSON in the response
   const jsonMatch = text.match(/```json\n?([\s\S]*?)\n?```/);
   if (jsonMatch) {
-    return JSON.parse(jsonMatch[1]);
+    return JSON.parse(jsonMatch[1]) as T;
   }
 
   // Try to parse the whole thing as JSON
   const trimmed = text.trim();
   if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
-    return JSON.parse(trimmed);
+    return JSON.parse(trimmed) as T;
   }
 
   throw new Error('No valid JSON found in response');

@@ -98,11 +98,11 @@ export async function POST(request: NextRequest) {
     userPrompt += '\nDesign the chart of accounts for this use case.';
 
     const response = await callGemini(ACCOUNTS_PROMPT, userPrompt);
-    const output = extractJSON(response);
+    const output = extractJSON<Record<string, unknown>>(response);
 
     // Pass through research data
     return NextResponse.json({
-      ...previousOutput,
+      ...(previousOutput || {}),
       ...output,
     });
   } catch (error) {

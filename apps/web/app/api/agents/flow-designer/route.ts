@@ -95,11 +95,11 @@ export async function POST(request: NextRequest) {
     userPrompt += '\nDesign 4-8 transaction steps that tell a compelling story for this use case.';
 
     const response = await callGemini(FLOW_PROMPT, userPrompt);
-    const output = extractJSON(response);
+    const output = extractJSON<Record<string, unknown>>(response);
 
     // Pass through previous data
     return NextResponse.json({
-      ...previousOutput,
+      ...(previousOutput || {}),
       ...output,
     });
   } catch (error) {
