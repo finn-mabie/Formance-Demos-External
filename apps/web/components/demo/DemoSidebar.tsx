@@ -1,11 +1,26 @@
 'use client';
 
+import { useEffect, useRef } from 'react';
 import { useDemoStore } from '@/lib/store';
 import { cn } from '@/lib/utils';
 import { ArrowRight, BookOpen, Eye, CheckCircle2 } from 'lucide-react';
 
 export function DemoSidebar() {
   const { config, currentStep, executedSteps, goToStep } = useDemoStore();
+  const containerRef = useRef<HTMLDivElement>(null);
+  const stepRefs = useRef<Map<number, HTMLButtonElement>>(new Map());
+
+  // Smooth scroll to current step when it changes
+  useEffect(() => {
+    const currentButton = stepRefs.current.get(currentStep);
+    if (currentButton && containerRef.current) {
+      currentButton.scrollIntoView({
+        behavior: 'smooth',
+        block: 'nearest',
+        inline: 'center',
+      });
+    }
+  }, [currentStep]);
 
   if (!config) return null;
 
@@ -13,10 +28,11 @@ export function DemoSidebar() {
   const hasQueries = config.usefulQueries && config.usefulQueries.length > 0;
 
   return (
-    <div className="px-8 py-3 border-b border-border overflow-x-auto bg-card">
+    <div ref={containerRef} className="px-8 py-3 border-b border-border overflow-x-auto bg-card scroll-smooth">
       <div className="flex items-center gap-2">
         {/* Intro step */}
         <button
+          ref={(el) => { if (el) stepRefs.current.set(-1, el); }}
           onClick={() => goToStep(-1)}
           className={cn(
             'flex items-center gap-2 px-3 py-1.5 rounded-full text-sm transition-all whitespace-nowrap',
@@ -38,6 +54,7 @@ export function DemoSidebar() {
           return (
             <div key={step.txType} className="flex items-center">
               <button
+                ref={(el) => { if (el) stepRefs.current.set(index, el); }}
                 onClick={() => goToStep(index)}
                 className={cn(
                   'flex items-center gap-2 px-3 py-1.5 rounded-full text-sm transition-all whitespace-nowrap',
@@ -64,6 +81,7 @@ export function DemoSidebar() {
         {/* Useful queries step */}
         {hasQueries && (
           <button
+            ref={(el) => { if (el) stepRefs.current.set(totalSteps, el); }}
             onClick={() => goToStep(totalSteps)}
             className={cn(
               'flex items-center gap-2 px-3 py-1.5 rounded-full text-sm transition-all whitespace-nowrap',
