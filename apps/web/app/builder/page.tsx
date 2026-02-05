@@ -3,9 +3,10 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { Home, Sparkles, FileText, Users, ArrowRight, Workflow, Code, Settings } from 'lucide-react';
+import { DemoConfig } from '@formance-demo/demo-configs';
 import { BuilderForm } from '@/components/builder/BuilderForm';
 import { AgentProgress } from '@/components/builder/AgentProgress';
-import { ConfigPreview, GeneratedConfig } from '@/components/builder/ConfigPreview';
+import { ConfigPreview } from '@/components/builder/ConfigPreview';
 
 type BuilderStep = 'input' | 'processing' | 'preview';
 
@@ -35,7 +36,7 @@ export default function BuilderPage() {
     { id: 'numscript-writer', name: 'Numscript Writer', status: 'pending' },
     { id: 'config-generator', name: 'Config Generator', status: 'pending' },
   ]);
-  const [finalConfig, setFinalConfig] = useState<GeneratedConfig | null>(null);
+  const [finalConfig, setFinalConfig] = useState<DemoConfig | null>(null);
 
   const handleStartBuild = async () => {
     setStep('processing');
@@ -88,7 +89,7 @@ export default function BuilderPage() {
       }
     }
 
-    setFinalConfig(previousOutput as GeneratedConfig);
+    setFinalConfig(previousOutput as DemoConfig);
     setStep('preview');
   };
 

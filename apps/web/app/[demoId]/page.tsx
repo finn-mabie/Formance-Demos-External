@@ -2,9 +2,10 @@
 
 import { useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { getDemoConfig } from '@formance-demo/demo-configs';
+import { getDemoConfig, DemoConfig } from '@formance-demo/demo-configs';
 import { useDemoStore } from '@/lib/store';
 import { DemoFullscreen } from '@/components/demo/DemoFullscreen';
+import { getGeneratedDemo } from '@/lib/generated-demos';
 
 export default function DemoPage() {
   const params = useParams();
@@ -14,7 +15,14 @@ export default function DemoPage() {
   const { config, initDemo } = useDemoStore();
 
   useEffect(() => {
-    const demoConfig = getDemoConfig(demoId);
+    // Check for pre-configured demos first, then generated demos
+    let demoConfig: DemoConfig | undefined = getDemoConfig(demoId);
+
+    if (!demoConfig) {
+      // Check if it's a generated demo stored in localStorage
+      demoConfig = getGeneratedDemo(demoId);
+    }
+
     if (!demoConfig) {
       router.push('/');
       return;

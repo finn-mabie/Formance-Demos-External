@@ -1,18 +1,12 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Download, Play, RotateCcw, Copy, Check, Code, Wallet, ArrowRightLeft } from 'lucide-react';
+import { DemoConfig } from '@formance-demo/demo-configs';
+import { saveGeneratedDemo } from '@/lib/generated-demos';
 
-export interface GeneratedConfig {
-  id: string;
-  name: string;
-  description: string;
-  accounts: Array<{ address: string; name: string; description: string; color: string }>;
-  variables: Record<string, string>;
-  transactionSteps: Array<{ txType: string; label: string; description: string; numscript: string }>;
-  usefulQueries: unknown[];
-}
+export type GeneratedConfig = DemoConfig;
 
 interface ConfigPreviewProps {
   config: GeneratedConfig;
@@ -20,6 +14,7 @@ interface ConfigPreviewProps {
 }
 
 export function ConfigPreview({ config, onReset }: ConfigPreviewProps) {
+  const router = useRouter();
   const [copied, setCopied] = useState(false);
   const [activeTab, setActiveTab] = useState<'overview' | 'accounts' | 'steps' | 'json'>('overview');
 
@@ -39,6 +34,13 @@ export function ConfigPreview({ config, onReset }: ConfigPreviewProps) {
     a.download = `${typedConfig.id}-config.json`;
     a.click();
     URL.revokeObjectURL(url);
+  };
+
+  const handleRunDemo = () => {
+    // Save the generated config to localStorage so the demo page can load it
+    saveGeneratedDemo(config);
+    // Navigate to the demo
+    router.push(`/${typedConfig.id}`);
   };
 
   return (
@@ -62,13 +64,13 @@ export function ConfigPreview({ config, onReset }: ConfigPreviewProps) {
 
       {/* Actions */}
       <div className="flex items-center gap-3">
-        <Link
-          href={`/${typedConfig.id}`}
+        <button
+          onClick={handleRunDemo}
           className="btn-primary btn-lg flex items-center gap-2"
         >
           <Play className="w-5 h-5" />
           Run Demo
-        </Link>
+        </button>
         <button
           onClick={handleDownload}
           className="btn-outline flex items-center gap-2"
