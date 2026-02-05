@@ -710,7 +710,7 @@ Buyer funds order, seller fulfills, platform takes commission.
 5. Local currency payout via local rails (SPEI in Mexico, PIX in Brazil)
 
 **Entities to Model**:
-- Treasury accounts at exchanges (Binance, Coins.ph, local exchanges)
+- Treasury accounts at exchanges (local and international exchanges)
 - Bank accounts (operating, pending, holding)
 - Platform fee accounts (transaction fees, FX spread)
 - Compliance hold accounts

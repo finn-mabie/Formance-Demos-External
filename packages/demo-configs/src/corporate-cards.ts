@@ -1,7 +1,7 @@
 import { DemoConfig } from './types';
 
 /**
- * Rain Demo Configuration
+ * Corporate Cards Demo Configuration
  *
  * Demonstrates B2B on-ramp / corporate card funding:
  * - Company funding via wire transfer
@@ -10,8 +10,8 @@ import { DemoConfig } from './types';
  * - Expense reconciliation
  * - Budget limits
  */
-export const rainConfig: DemoConfig = {
-  id: 'rain',
+export const corporateCardsConfig: DemoConfig = {
+  id: 'corporate-cards',
   name: 'B2B On-Ramp & Corporate Cards',
   description:
     'Corporate expense management with card funding, employee allocations, and spend tracking',

@@ -47,6 +47,7 @@ function formatAmount(amount: string): string {
     const suffixes: Record<string, string> = {
       USDT: ' USDT',
       USDC: ' USDC',
+      AUSD: ' AUSD',
       TSLA: ' TSLA',
       BTC: ' BTC',
       ETH: ' ETH',
@@ -230,43 +231,174 @@ function createArrow(
   return [arrow, label];
 }
 
+function createHorizontalArrow(
+  fromX: number,
+  fromY: number,
+  toX: number,
+  toY: number,
+  amount: string,
+  labelAbove: boolean
+): ExcalidrawElementAny[] {
+  const arrowId = `arrow-${generateId()}`;
+  const labelId = `label-${generateId()}`;
+
+  const arrow: ExcalidrawElementAny = {
+    id: arrowId,
+    type: 'arrow',
+    x: fromX,
+    y: fromY,
+    width: toX - fromX,
+    height: toY - fromY,
+    angle: 0,
+    strokeColor: '#495057',
+    backgroundColor: 'transparent',
+    fillStyle: 'solid',
+    strokeWidth: 2,
+    strokeStyle: 'solid',
+    roughness: 1,
+    opacity: 100,
+    groupIds: [],
+    frameId: null,
+    roundness: { type: 2 },
+    seed: Math.floor(Math.random() * 100000),
+    version: 1,
+    versionNonce: Math.floor(Math.random() * 100000),
+    isDeleted: false,
+    boundElements: null,
+    link: null,
+    locked: false,
+    startBinding: null,
+    endBinding: null,
+    startArrowhead: null,
+    endArrowhead: 'arrow',
+    points: [
+      [0, 0],
+      [toX - fromX, toY - fromY],
+    ],
+  };
+
+  const formattedAmount = formatAmount(amount);
+  const midX = (fromX + toX) / 2;
+  const label: ExcalidrawElementAny = {
+    id: labelId,
+    type: 'text',
+    x: midX - formattedAmount.length * 4,
+    y: labelAbove ? fromY - 22 : fromY + 8,
+    width: formattedAmount.length * 10,
+    height: 16,
+    angle: 0,
+    strokeColor: '#2f9e44',
+    backgroundColor: 'transparent',
+    fillStyle: 'solid',
+    strokeWidth: 1,
+    strokeStyle: 'solid',
+    roughness: 0,
+    opacity: 100,
+    groupIds: [],
+    frameId: null,
+    roundness: null,
+    seed: Math.floor(Math.random() * 100000),
+    version: 1,
+    versionNonce: Math.floor(Math.random() * 100000),
+    isDeleted: false,
+    boundElements: null,
+    link: null,
+    locked: false,
+    text: formattedAmount,
+    fontSize: 12,
+    fontFamily: 1,
+    textAlign: 'center',
+    verticalAlign: 'middle',
+    containerId: null,
+    originalText: formattedAmount,
+    autoResize: true,
+    lineHeight: 1.25,
+  };
+
+  return [arrow, label];
+}
+
 function postingsToElements(postings: Posting[]): ExcalidrawElementAny[] {
   if (postings.length === 0) return [];
 
   const elements: ExcalidrawElementAny[] = [];
-  const accountPositions = new Map<string, { x: number; y: number; id: string }>();
+  const accountPositions = new Map<string, { x: number; y: number; id: string; width: number }>();
 
+  const boxWidth = 200;
+  const boxHeight = 50;
+  const horizontalGap = 120;
+  const verticalGap = 100;
+  const startX = 100;
+  const startY = 50;
+  const sidecarGap = 250;
+
+  // Analyze flow patterns
   const outflows = new Map<string, { to: string; amount: string }[]>();
-  const inflows = new Map<string, string[]>();
+  const inflows = new Map<string, { from: string; amount: string }[]>();
 
   for (const p of postings) {
     if (!outflows.has(p.source)) outflows.set(p.source, []);
     outflows.get(p.source)!.push({ to: p.destination, amount: p.amount });
 
     if (!inflows.has(p.destination)) inflows.set(p.destination, []);
-    inflows.get(p.destination)!.push(p.source);
+    inflows.get(p.destination)!.push({ from: p.source, amount: p.amount });
   }
 
-  const roots: string[] = [];
+  // Collect all accounts involved
   const allAccounts = new Set([...outflows.keys(), ...inflows.keys()]);
 
+  // Detect exchange accounts - accounts that have "exchange" in name
+  // and interact with @world
+  const exchangeAccounts = new Set<string>();
   for (const account of allAccounts) {
-    const accountInflows = inflows.get(account) || [];
-    if (accountInflows.length === 0) {
-      roots.push(account);
-    }
-  }
-
-  if (roots.length === 0) {
-    for (const account of allAccounts) {
-      if (account === 'world') continue;
+    if (account === 'world') continue;
+    const isExchangeByName = account.toLowerCase().includes('exchange');
+    if (isExchangeByName) {
+      const accountOutflows = outflows.get(account) || [];
       const accountInflows = inflows.get(account) || [];
-      if (accountInflows.every((src) => src === 'world')) {
-        roots.push(account);
+      const hasWorldInteraction =
+        accountOutflows.some(f => f.to === 'world') ||
+        accountInflows.some(f => f.from === 'world');
+      if (hasWorldInteraction) {
+        exchangeAccounts.add(account);
       }
     }
   }
 
+  const hasExchangePattern = exchangeAccounts.size > 0;
+
+  // Debug logging
+  console.log('All accounts:', [...allAccounts]);
+  console.log('Exchange accounts detected:', [...exchangeAccounts]);
+  console.log('Has exchange pattern:', hasExchangePattern);
+
+  // For exchange patterns: build tree without @world, then add @world as sidecar
+  // The exchange account should be central, with sources above and destinations below
+
+  // Find the primary flow path (excluding @world when there are exchanges)
+  const nonWorldAccounts = [...allAccounts].filter(a => a !== 'world');
+
+  // Find root accounts (accounts that only receive from @world or have no inflows)
+  const roots: string[] = [];
+  for (const account of nonWorldAccounts) {
+    const accountInflows = inflows.get(account) || [];
+    const nonWorldInflows = accountInflows.filter(f => f.from !== 'world');
+    if (nonWorldInflows.length === 0) {
+      roots.push(account);
+    }
+  }
+
+  // If no roots, use first non-world, non-exchange account
+  if (roots.length === 0) {
+    for (const account of nonWorldAccounts) {
+      if (!exchangeAccounts.has(account)) {
+        roots.push(account);
+        break;
+      }
+    }
+  }
+
+  // BFS to assign levels (completely ignoring @world)
   const levels = new Map<string, number>();
   const queue = [...roots];
   for (const root of roots) {
@@ -278,6 +410,7 @@ function postingsToElements(postings: Posting[]): ExcalidrawElementAny[] {
     const currentLevel = levels.get(current) || 0;
 
     for (const { to } of outflows.get(current) || []) {
+      if (to === 'world') continue; // Always skip @world in tree building
       if (!levels.has(to)) {
         levels.set(to, currentLevel + 1);
         queue.push(to);
@@ -285,78 +418,140 @@ function postingsToElements(postings: Posting[]): ExcalidrawElementAny[] {
     }
   }
 
+  // Handle accounts that weren't reached by BFS (may only connect via @world)
+  for (const account of nonWorldAccounts) {
+    if (!levels.has(account)) {
+      // Check if this account receives from @world
+      const accountInflows = inflows.get(account) || [];
+      const worldInflow = accountInflows.find(f => f.from === 'world');
+      if (worldInflow && !exchangeAccounts.has(account)) {
+        // This is a destination from @world (like circulating supply tracking)
+        // Find the exchange account's level and put this at the same level or one below
+        let maxExchangeLevel = 0;
+        for (const exch of exchangeAccounts) {
+          maxExchangeLevel = Math.max(maxExchangeLevel, levels.get(exch) || 0);
+        }
+        levels.set(account, maxExchangeLevel + 1);
+      }
+    }
+  }
+
+  // Group accounts by level
   const levelGroups = new Map<number, string[]>();
   for (const [account, level] of levels) {
     if (!levelGroups.has(level)) levelGroups.set(level, []);
     levelGroups.get(level)!.push(account);
   }
 
-  const boxWidth = 200;
-  const boxHeight = 50;
-  const horizontalGap = 80;
-  const verticalGap = 100;
-  const startX = 100;
-  const startY = 50;
+  // Position main tree accounts
+  let maxX = 0;
+  let exchangeY = startY;
+  let exchangeRightEdge = startX;
 
-  for (const [level, accounts] of levelGroups) {
-    if (!accounts) continue;
+  const sortedLevels = [...levelGroups.keys()].sort((a, b) => a - b);
+  for (const level of sortedLevels) {
+    const accounts = levelGroups.get(level) || [];
     const totalWidth = accounts.length * boxWidth + (accounts.length - 1) * horizontalGap;
-    const offsetX = (totalWidth - boxWidth) / 2;
+    const levelStartX = startX + 150 - totalWidth / 2 + boxWidth / 2;
 
     for (let i = 0; i < accounts.length; i++) {
       const account = accounts[i];
       if (!account) continue;
-      const accountX = startX + i * (boxWidth + horizontalGap) - offsetX + 150;
+      const accountX = levelStartX + i * (boxWidth + horizontalGap);
       const accountY = startY + level * (boxHeight + verticalGap);
 
       const id = generateId();
-      accountPositions.set(account, { x: accountX, y: accountY, id });
+      const labelWidth = Math.max(boxWidth, account.length * 10 + 40);
+      accountPositions.set(account, { x: accountX, y: accountY, id, width: labelWidth });
+      elements.push(...createAccountBox(id, accountX, accountY, account, false));
 
-      const isWorld = account === 'world';
-      elements.push(...createAccountBox(id, accountX, accountY, account, isWorld));
+      maxX = Math.max(maxX, accountX + labelWidth);
+
+      // Track exchange position for @world sidecar
+      if (exchangeAccounts.has(account)) {
+        exchangeY = accountY;
+        exchangeRightEdge = Math.max(exchangeRightEdge, accountX + labelWidth);
+      }
     }
   }
 
-  // Group postings by source-destination pair to handle multiple arrows
-  const arrowGroups = new Map<string, { postings: Posting[]; fromPos: { x: number; y: number }; toPos: { x: number; y: number } }>();
+  // Position @world as sidecar to the right of the exchange
+  if (hasExchangePattern) {
+    const worldX = exchangeRightEdge + sidecarGap;
+    const worldY = exchangeY;
+    const id = generateId();
+    const worldWidth = Math.max(boxWidth, 'world'.length * 10 + 40);
+    accountPositions.set('world', { x: worldX, y: worldY, id, width: worldWidth });
+    elements.push(...createAccountBox(id, worldX, worldY, 'world', true));
+  }
 
+  // Draw arrows
   for (const p of postings) {
     const fromPos = accountPositions.get(p.source);
     const toPos = accountPositions.get(p.destination);
 
-    if (fromPos && toPos) {
-      const key = `${p.source}->${p.destination}`;
-      if (!arrowGroups.has(key)) {
-        arrowGroups.set(key, { postings: [], fromPos, toPos });
+    if (!fromPos || !toPos) continue;
+
+    // Check if this is an exchange <-> @world flow
+    const isExchangeToWorld = exchangeAccounts.has(p.source) && p.destination === 'world';
+    const isWorldToExchange = p.source === 'world' && exchangeAccounts.has(p.destination);
+
+    if (hasExchangePattern && (isExchangeToWorld || isWorldToExchange)) {
+      // Draw horizontal arrows between exchange and @world
+      const exchAccount = isExchangeToWorld ? p.source : p.destination;
+      const exchPos = accountPositions.get(exchAccount)!;
+      const worldPos = accountPositions.get('world')!;
+
+      // Count arrows for vertical offset
+      const exchangeWorldArrows = postings.filter(
+        pp =>
+          (pp.source === exchAccount && pp.destination === 'world') ||
+          (pp.source === 'world' && pp.destination === exchAccount)
+      );
+      const arrowIndex = exchangeWorldArrows.findIndex(
+        pp => pp.source === p.source && pp.destination === p.destination && pp.amount === p.amount
+      );
+      const totalArrows = exchangeWorldArrows.length;
+      const yOffset = totalArrows > 1 ? (arrowIndex - (totalArrows - 1) / 2) * 18 : 0;
+
+      if (isExchangeToWorld) {
+        // Arrow going right: exchange → world
+        const fromX = exchPos.x + (exchPos.width || boxWidth);
+        const fromY = exchPos.y + boxHeight / 2 + yOffset;
+        const toX = worldPos.x;
+        const toY = worldPos.y + boxHeight / 2 + yOffset;
+        elements.push(...createHorizontalArrow(fromX, fromY, toX, toY, p.amount, yOffset <= 0));
+      } else {
+        // Arrow going left: world → exchange
+        const fromX = worldPos.x;
+        const fromY = worldPos.y + boxHeight / 2 + yOffset;
+        const toX = exchPos.x + (exchPos.width || boxWidth);
+        const toY = exchPos.y + boxHeight / 2 + yOffset;
+        elements.push(...createHorizontalArrow(fromX, fromY, toX, toY, p.amount, yOffset <= 0));
       }
-      arrowGroups.get(key)!.postings.push(p);
-    }
-  }
-
-  // Draw arrows with offset for multiple arrows between same accounts
-  for (const [, group] of arrowGroups) {
-    const { postings: groupPostings, fromPos, toPos } = group;
-    const count = groupPostings.length;
-    const offsetStep = 40; // Horizontal offset between parallel arrows
-    const totalOffset = (count - 1) * offsetStep;
-    const startOffset = -totalOffset / 2;
-
-    groupPostings.forEach((p, idx) => {
-      const offset = startOffset + idx * offsetStep;
-      const fromX = fromPos.x + boxWidth / 2 + offset;
+    } else if (p.source === 'world' || p.destination === 'world') {
+      // Non-exchange flows involving @world - skip these or draw diagonal
+      // For now, skip them as they're usually just tracking entries
+      continue;
+    } else {
+      // Regular vertical arrows between non-world accounts
+      const fromX = fromPos.x + (fromPos.width || boxWidth) / 2;
       const fromY = fromPos.y + boxHeight;
-      const toX = toPos.x + boxWidth / 2 + offset;
+      const toX = toPos.x + (toPos.width || boxWidth) / 2;
       const toY = toPos.y;
 
       elements.push(...createArrow(fromX, fromY, toX, toY, p.amount));
-    });
+    }
   }
 
   return elements;
 }
 
+// Version 2: Updated exchange pattern detection
+const DIAGRAM_VERSION = 'v2';
+
 function getStorageKey(demoName: string, txType: string): string {
-  return `excalidraw-diagram-${demoName}-${txType}`;
+  return `excalidraw-diagram-${DIAGRAM_VERSION}-${demoName}-${txType}`;
 }
 
 export function ExcalidrawFlowDiagram({ postings, txType, demoName, description }: Props) {
@@ -485,42 +680,64 @@ export function ExcalidrawFlowDiagram({ postings, txType, demoName, description 
 export function parsePostingsFromNumscript(script: string): Posting[] {
   const postings: Posting[] = [];
 
-  const sendPattern =
-    /send\s+\[([^\]]+)\]\s*\(\s*source\s*=\s*\{?\s*(@[\w:{}]+(?:\s+@[\w:{}]+)*)\s*\}?\s*(allowing\s+(?:unbounded\s+)?overdraft)?\s*destination\s*=\s*(@[\w:{}]+)\s*\)/gs;
+  // Split by 'send' keyword to handle multiple send statements
+  const sendBlocks = script.split(/(?=\bsend\s+\[)/);
 
-  let match;
-  while ((match = sendPattern.exec(script)) !== null) {
-    const amount = match[1];
-    const sourceRaw = match[2];
-    const destination = match[4];
+  for (const block of sendBlocks) {
+    if (!block.trim().startsWith('send')) continue;
 
-    if (!amount || !sourceRaw || !destination) continue;
+    // Extract amount: [ASSET/DECIMALS AMOUNT]
+    const amountMatch = block.match(/send\s+\[([^\]]+)\]/);
+    if (!amountMatch) continue;
+    const amount = amountMatch[1].trim();
 
-    const sources = sourceRaw.trim().split(/\s+/);
-    const source = sources[0];
+    // Extract source - handle various formats
+    let source: string | null = null;
+
+    // Try: source = @account
+    const simpleSourceMatch = block.match(/source\s*=\s*(@[\w:{}\-]+)/);
+    if (simpleSourceMatch) {
+      source = simpleSourceMatch[1];
+    }
+
+    // Try: source = { @account1 @account2 } (waterfall) - take first
+    if (!source) {
+      const waterfallMatch = block.match(/source\s*=\s*\{([^}]+)\}/s);
+      if (waterfallMatch) {
+        const firstAccount = waterfallMatch[1].match(/@[\w:{}\-]+/);
+        if (firstAccount) {
+          source = firstAccount[0];
+        }
+      }
+    }
+
+    // Extract destination - handle various formats
+    let destination: string | null = null;
+
+    // Try: destination = @account
+    const simpleDestMatch = block.match(/destination\s*=\s*(@[\w:{}\-]+)/);
+    if (simpleDestMatch) {
+      destination = simpleDestMatch[1];
+    }
+
+    // Try: destination = { percentage to @account ... remaining to @account }
+    // For split destinations, we'll take the first destination for simplicity
+    if (!destination) {
+      const splitDestMatch = block.match(/destination\s*=\s*\{([^}]+)\}/s);
+      if (splitDestMatch) {
+        const firstDest = splitDestMatch[1].match(/to\s+(@[\w:{}\-]+)/);
+        if (firstDest) {
+          destination = firstDest[1];
+        }
+      }
+    }
 
     if (amount && source && destination) {
       postings.push({
-        amount: amount.trim(),
+        amount: amount,
         source: source.replace('@', ''),
         destination: destination.replace('@', ''),
       });
-    }
-  }
-
-  if (postings.length === 0) {
-    const simplePattern = /send\s+\[([^\]]+)\][^@]*(@[^\s\)]+)[^@]*(@[^\s\)]+)/gs;
-    while ((match = simplePattern.exec(script)) !== null) {
-      const amount = match[1];
-      const source = match[2];
-      const destination = match[3];
-      if (amount && source && destination) {
-        postings.push({
-          amount: amount.trim(),
-          source: source.replace('@', ''),
-          destination: destination.replace('@', ''),
-        });
-      }
     }
   }
 

@@ -9,7 +9,7 @@ const SYSTEM_PROMPT = `You are Gibon, a friendly and knowledgeable Formance expe
 
 You are on the **Formance Demo Builder** site. This is an interactive tool where users can:
 
-1. **Explore pre-built demos**: Click on demo cards (like "Coins.ph Remittance", "SportsBet Wallet") to see how different financial flows work
+1. **Explore pre-built demos**: Click on demo cards (like "Cross-Border Remittance", "Digital Wallet") to see how different financial flows work
 2. **Build custom demos**: Use the "/builder" page to create new demos by describing a business use case
 3. **Run transactions step-by-step**: Each demo has transaction steps that execute Numscript and update account balances in real-time
 4. **Query the ledger**: Use aggregate balance queries to see totals across accounts
@@ -148,6 +148,81 @@ send [ETH/18 1000000000000000000] (
   destination = @zodia:fees
 )
 set_tx_meta("type", "STAKING_LOCK")
+
+---
+
+## INDUSTRY DEEP DIVES
+
+### Crypto Remittance ("Stablecoin Sandwich")
+The "stablecoin sandwich" is a remittance pattern where fiat is converted to stablecoin on one end, transferred on-chain, then converted back to local fiat.
+
+Typical flow for Philippines-to-Brazil:
+1. Client sends USD to Philippines entity
+2. Philippines converts USD to USDT (cannot receive USD directly in Brazil)
+3. USDT sent on-chain to Brazil entity
+4. Brazil sells USDT for BRL on local exchange
+5. BRL payout via PIX to recipient
+
+Key accounts: Treasury hot wallets per exchange, compliance holds, FX spread tracking, bank pending/operating accounts.
+
+Common challenges: VASP regulation compliance, multi-entity intercompany tracking, audit requirements.
+
+### Sports Betting / Gaming
+Sportsbook platforms need internal wallets separate from PSP orchestrators.
+
+Typical flow:
+1. Customer deposits $100 via card
+2. Funds available in customer wallet
+3. Customer places $10 wager (funds move to hold)
+4. Wager resolves - win: funds return + winnings, lose: funds forfeited
+5. Customer withdraws or re-bets
+
+Key accounts: Customer available, wager holds per bet, platform revenue, PSP integration.
+
+Important: Most sportsbooks prefer customers re-spending winnings rather than withdrawing. Design the demo to show the wallet lifecycle.
+
+### Crypto Exchange
+Exchanges often have home-built ledgers that are fragile. Key features they need:
+- Immutability (prevent internal tampering)
+- Double-entry between accounts (not just sub-accounts)
+- Dashboards and audit trails
+- Connectivity to custody providers (Fireblocks, BitGo)
+
+Typical accounts: User fiat balances, user crypto balances (multi-asset), custody hot/cold wallets, trading fees.
+
+### Wealth Management
+Investment platforms need to track trade settlement states.
+
+Critical concept: "Pending cash" - when you sell stock, cash is credited but locked until T+2 settlement. You CAN reinvest it but CANNOT withdraw it.
+
+Accounts: Cash available, cash pending, investments (multi-asset for stocks/ETFs/bonds), exchange accounts per trade.
+
+One account per trade allows storing metadata (price, time, etc.). High-volume platforms may use common exchange account with transaction metadata instead.
+
+### High-Throughput Payments
+Payment processors face contention on heavily-used accounts.
+
+Solutions:
+- Account sharding (split receivables across N accounts, round-robin)
+- Async hash log writes
+- Bulk transaction endpoints
+- Worker parallelism matching shard count
+
+### Card Issuing / Processing
+Card issuers face unique challenges:
+- Authorization latency critical (hundreds of milliseconds)
+- Two-phase commit: Auth amount may differ from settlement amount
+- Corporate card hierarchies create contention (company → dept → employee → card)
+- ~100 TPS per account due to balance locking, but multi-thousand TPS at ledger level
+
+Pattern: Authorization hold → Settlement/Posting (may be partial, higher, or reversed)
+
+### Color of Money (Asset Provenance)
+When same asset type comes from different sources (e.g., USDT from Ethereum vs Tron), you can:
+1. Use asset variants: USDT:ETH/6 vs USDT:TRX/6
+2. Track origin in metadata while keeping fungible
+
+Use cases: Compliance tracking, promotional credits vs real money, blockchain provenance.
 
 ---
 

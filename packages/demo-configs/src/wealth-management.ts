@@ -1,7 +1,7 @@
 import { DemoConfig } from './types';
 
 /**
- * Monetae Demo Configuration
+ * Wealth Management Demo Configuration
  *
  * Demonstrates fiat custody + wealth tech:
  * - Client onboarding with KYC
@@ -10,8 +10,8 @@ import { DemoConfig } from './types';
  * - Fee collection (management + performance)
  * - Dividend distribution
  */
-export const monetaeConfig: DemoConfig = {
-  id: 'monetae',
+export const wealthManagementConfig: DemoConfig = {
+  id: 'wealth-management',
   name: 'Fiat Custody + Wealth Management',
   description:
     'Wealth tech platform with multi-currency custody, investment allocations, and fee management',

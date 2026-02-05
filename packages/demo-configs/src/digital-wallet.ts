@@ -1,19 +1,19 @@
 import { DemoConfig } from './types';
 
 /**
- * Sportsbet Demo Configuration
+ * Digital Wallet Demo Configuration
  *
- * Demonstrates a sports betting platform with:
+ * Demonstrates a digital wallet platform with:
  * - Customer wallet lifecycle (deposit, available, pending, withdrawable)
  * - Platform float for payouts
  * - Wager placement and settlement
  * - Withdrawal flow
  */
-export const sportsbetConfig: DemoConfig = {
-  id: 'sportsbet',
-  name: 'Sportsbet Wagering Flow',
+export const digitalWalletConfig: DemoConfig = {
+  id: 'digital-wallet',
+  name: 'Digital Wallet Flow',
   description:
-    'Sports betting platform with customer wallets, deposit flows, wagering, and withdrawals',
+    'Digital wallet platform with customer wallets, deposit flows, wagering, and withdrawals',
 
   accounts: [
     {

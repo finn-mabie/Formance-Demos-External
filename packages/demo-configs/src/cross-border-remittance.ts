@@ -1,7 +1,7 @@
 import { DemoConfig } from './types';
 
 /**
- * Coins.ph Demo Configuration
+ * Cross-Border Remittance Demo Configuration
  *
  * Cross-border B2B remittance (Philippines → Brazil):
  * - USD received in Philippines
@@ -12,8 +12,8 @@ import { DemoConfig } from './types';
  *
  * 7 steps showing the complete remittance journey
  */
-export const coinsPhConfig: DemoConfig = {
-  id: 'coins-ph',
+export const crossBorderRemittanceConfig: DemoConfig = {
+  id: 'cross-border-remittance',
   name: 'Cross-Border Remittance',
   description:
     'B2B remittance from Philippines to Brazil using USDT rails with full intercompany tracking',
@@ -205,8 +205,8 @@ send [USDT/6 9980000000] (
 set_tx_meta("type", "INTERCO_INITIATED")
 set_tx_meta("remittance_id", "{REMITTANCE_ID}")
 set_tx_meta("client_id", "{CLIENT_ID}")
-set_tx_meta("from_entity", "coins_ph")
-set_tx_meta("to_entity", "coins_br")
+set_tx_meta("from_entity", "entity_ph")
+set_tx_meta("to_entity", "entity_br")
 set_tx_meta("status", "PENDING")`,
       queries: [
         {

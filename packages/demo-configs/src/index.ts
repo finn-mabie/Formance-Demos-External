@@ -1,4 +1,7 @@
-export { coinsPhConfig } from './coins-ph';
+export { crossBorderRemittanceConfig } from './cross-border-remittance';
+export { wealthManagementConfig } from './wealth-management';
+export { corporateCardsConfig } from './corporate-cards';
+export { digitalWalletConfig } from './digital-wallet';
 export { cedefiCustodyConfig } from './cedefi-custody';
 export { stablecoinIssuanceConfig } from './stablecoin-issuance';
 
@@ -15,7 +18,10 @@ export {
   type TransactionFilterOptions,
 } from './types';
 
-import { coinsPhConfig } from './coins-ph';
+import { crossBorderRemittanceConfig } from './cross-border-remittance';
+import { wealthManagementConfig } from './wealth-management';
+import { corporateCardsConfig } from './corporate-cards';
+import { digitalWalletConfig } from './digital-wallet';
 import { cedefiCustodyConfig } from './cedefi-custody';
 import { stablecoinIssuanceConfig } from './stablecoin-issuance';
 import { DemoConfig } from './types';
@@ -24,7 +30,10 @@ import { DemoConfig } from './types';
  * All available demo configurations
  */
 export const DEMO_CONFIGS: Record<string, DemoConfig> = {
-  'coins-ph': coinsPhConfig,
+  'cross-border-remittance': crossBorderRemittanceConfig,
+  'wealth-management': wealthManagementConfig,
+  'corporate-cards': corporateCardsConfig,
+  'digital-wallet': digitalWalletConfig,
   'cedefi-custody': cedefiCustodyConfig,
   'stablecoin-issuance': stablecoinIssuanceConfig,
 };
