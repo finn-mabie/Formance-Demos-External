@@ -1,11 +1,10 @@
 'use client';
 
-import { Globe, FileText, Lightbulb, Sparkles } from 'lucide-react';
+import { Globe, Layers, Sparkles } from 'lucide-react';
 
 interface BuilderInput {
   companyUrl: string;
-  transcript: string;
-  useCase: string;
+  description: string;
 }
 
 interface BuilderFormProps {
@@ -15,7 +14,7 @@ interface BuilderFormProps {
 }
 
 export function BuilderForm({ input, onChange, onSubmit }: BuilderFormProps) {
-  const hasInput = input.companyUrl || input.transcript || input.useCase;
+  const hasInput = input.companyUrl || input.description;
 
   return (
     <div className="bg-card rounded-xl border border-border p-6 space-y-6">
@@ -37,39 +36,26 @@ export function BuilderForm({ input, onChange, onSubmit }: BuilderFormProps) {
         </p>
       </div>
 
-      {/* Transcript */}
+      {/* What are you building */}
       <div>
         <label className="flex items-center gap-2 text-sm font-medium text-foreground mb-2">
-          <FileText className="w-4 h-4 text-primary" />
-          Sales Call Transcript (Optional)
+          <Layers className="w-4 h-4 text-primary" />
+          What are you building?
         </label>
         <textarea
-          placeholder="Paste transcript from a sales call or discovery meeting..."
-          value={input.transcript}
-          onChange={(e) => onChange({ ...input, transcript: e.target.value })}
-          rows={6}
-          className="w-full px-4 py-3 bg-background border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-colors resize-none font-mono text-sm text-foreground placeholder:text-muted-foreground"
-        />
-        <p className="text-xs text-muted-foreground mt-1">
-          Include any relevant discussions about their payment flows and requirements
-        </p>
-      </div>
+          placeholder="Describe what you want to track in the ledger. For example:
 
-      {/* Use Case Description */}
-      <div>
-        <label className="flex items-center gap-2 text-sm font-medium text-foreground mb-2">
-          <Lightbulb className="w-4 h-4 text-primary" />
-          Use Case Description (Optional)
-        </label>
-        <textarea
-          placeholder="Describe the specific use case you want to demonstrate, e.g., 'Customer wallet with deposits, purchases, and withdrawals' or 'B2B payments with escrow'"
-          value={input.useCase}
-          onChange={(e) => onChange({ ...input, useCase: e.target.value })}
-          rows={3}
+• 'A digital wallet where customers can deposit funds, make purchases, and withdraw to their bank account'
+• 'Cross-border remittances from US to Philippines with FX conversion'
+• 'B2B marketplace with escrow payments and seller payouts'
+• 'Crypto exchange with fiat on/off ramps and trading pairs'"
+          value={input.description}
+          onChange={(e) => onChange({ ...input, description: e.target.value })}
+          rows={7}
           className="w-full px-4 py-3 bg-background border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-colors resize-none text-foreground placeholder:text-muted-foreground"
         />
         <p className="text-xs text-muted-foreground mt-1">
-          Help focus the demo on specific payment flows
+          Describe the money flows you want to model - accounts, transactions, and business logic
         </p>
       </div>
 

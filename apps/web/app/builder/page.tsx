@@ -19,16 +19,14 @@ interface AgentState {
 
 interface BuilderInput {
   companyUrl: string;
-  transcript: string;
-  useCase: string;
+  description: string;
 }
 
 export default function BuilderPage() {
   const [step, setStep] = useState<BuilderStep>('input');
   const [input, setInput] = useState<BuilderInput>({
     companyUrl: '',
-    transcript: '',
-    useCase: '',
+    description: '',
   });
   const [agents, setAgents] = useState<AgentState[]>([
     { id: 'research', name: 'Research', status: 'pending' },
