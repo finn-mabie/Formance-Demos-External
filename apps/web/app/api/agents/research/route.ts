@@ -1,72 +1,76 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { callGemini, extractJSON, FORMANCE_CONTEXT } from '@/lib/gemini';
 
-/**
- * Research Agent API Route
- *
- * In production, this would use the Anthropic API with the research prompt.
- * For now, returns mock data based on input.
- */
+const RESEARCH_PROMPT = `You are a financial technology analyst specializing in understanding fintech business models and payment flows.
+
+Your task is to analyze the provided company information and describe their business in terms that will help design a Formance Ledger demo.
+
+${FORMANCE_CONTEXT}
+
+## Your Task
+
+Based on the provided company website and/or description, identify:
+
+1. **Company Overview**: What the company does in 1-2 sentences
+2. **Business Model**: How they make money
+3. **Key Entities**: Who are the participants (customers, merchants, banks, etc.)
+4. **Money Flows**: What are the main financial transactions that occur
+5. **Currencies/Assets**: What currencies or assets are involved
+6. **Demo Type Suggestion**: What type of demo would best showcase this (wallet, remittance, marketplace, custody, etc.)
+
+## Output Format
+
+Respond with a valid JSON object (no markdown, just raw JSON):
+
+{
+  "companyName": "Company Name",
+  "businessModel": "Detailed description of what they do and how they make money",
+  "keyEntities": ["Customers", "Merchants", "Banks", "Payment Processors"],
+  "keyFlows": [
+    "Customer deposits funds via bank transfer",
+    "Customer purchases from merchant",
+    "Platform collects commission",
+    "Merchant receives payout"
+  ],
+  "currencies": ["USD", "EUR"],
+  "painPoints": [
+    "Need to track balances across multiple systems",
+    "Reconciliation with payment providers",
+    "Audit trail for compliance"
+  ],
+  "suggestedDemoType": "marketplace",
+  "suggestedDemoName": "Suggested Demo Name",
+  "suggestedDescription": "One-line description of what the demo will show"
+}
+`;
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const { input } = body;
 
-    // Simulate processing delay
-    await new Promise((resolve) => setTimeout(resolve, 1500));
+    // Build user prompt from input
+    let userPrompt = 'Analyze this company for a Formance Ledger demo:\n\n';
 
-    // Generate mock research output based on input
-    const companyName = extractCompanyName(input.companyUrl, input.useCase);
+    if (input.companyUrl) {
+      userPrompt += `Company Website: ${input.companyUrl}\n\n`;
+    }
 
-    const output = {
-      companyName,
-      businessModel: `${companyName} is a fintech company that processes payments and manages customer funds. They handle deposits, transfers, and withdrawals for their users.`,
-      keyFlows: [
-        'Customer deposits via bank transfer',
-        'Internal transfers between users',
-        'Withdrawal to bank account',
-        'Fee collection on transactions',
-        'Refund processing',
-      ],
-      painPoints: [
-        'Manual reconciliation of transactions',
-        'Lack of real-time balance visibility',
-        'Difficulty tracking multi-step flows',
-        'Audit trail gaps',
-      ],
-      stakeholders: ['Customers', 'Platform', 'Partner Banks', 'Payment Processors'],
-      currencies: ['USD'],
-      suggestedDemoType: 'wallet',
-    };
+    if (input.description) {
+      userPrompt += `Description of what they're building:\n${input.description}\n\n`;
+    }
+
+    userPrompt += 'Please analyze this and provide the structured output.';
+
+    const response = await callGemini(RESEARCH_PROMPT, userPrompt);
+    const output = extractJSON(response);
 
     return NextResponse.json(output);
   } catch (error) {
     console.error('Research agent error:', error);
     return NextResponse.json(
-      { error: 'Research agent failed' },
+      { error: 'Research agent failed', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     );
   }
-}
-
-function extractCompanyName(url?: string, useCase?: string): string {
-  if (url) {
-    try {
-      const hostname = new URL(url).hostname;
-      const name = hostname.replace('www.', '').split('.')[0];
-      return name ? name.charAt(0).toUpperCase() + name.slice(1) : 'Acme';
-    } catch {
-      return 'Acme';
-    }
-  }
-
-  if (useCase) {
-    // Extract first word as potential company name
-    const words = useCase.split(' ');
-    const firstWord = words[0];
-    if (firstWord && firstWord.length > 2 && firstWord[0]?.toUpperCase() === firstWord[0]) {
-      return firstWord;
-    }
-  }
-
-  return 'Acme';
 }

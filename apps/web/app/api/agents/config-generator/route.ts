@@ -1,210 +1,102 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { callGemini, extractJSON, FORMANCE_CONTEXT, DEMO_OUTPUT_FORMAT } from '@/lib/gemini';
 
-/**
- * Config Generator Agent API Route
- *
- * Assembles all previous outputs into a complete demo configuration.
- */
+const CONFIG_PROMPT = `You are assembling a complete Formance demo configuration from the components provided.
+
+${FORMANCE_CONTEXT}
+
+${DEMO_OUTPUT_FORMAT}
+
+## Your Task
+
+Take all the pieces from the previous agents (accounts, transaction steps with numscript) and assemble them into a complete, valid demo configuration.
+
+## Requirements
+
+1. **Generate a unique ID** - lowercase, hyphen-separated, e.g., "acme-wallet-demo"
+2. **Create a descriptive name** - e.g., "Acme Digital Wallet Demo"
+3. **Write a one-line description** - summarizes what the demo shows
+4. **Include all accounts** - with proper colors
+5. **Include all transaction steps** - with their numscript
+6. **Add 3-5 useful queries** - balance checks, transaction history, account listings
+7. **DO NOT include @world in accounts** - it's implicit
+
+## Query Types
+
+Balance query:
+{
+  "title": "Customer Balances",
+  "description": "All customer account balances",
+  "queryType": "balance",
+  "addressFilter": "@customers:"
+}
+
+Transaction query:
+{
+  "title": "All Deposits",
+  "description": "Filter transactions by type",
+  "queryType": "transactions",
+  "transactionFilter": {
+    "metadata": { "type": "DEPOSIT" }
+  }
+}
+
+Account query:
+{
+  "title": "Customer Accounts",
+  "description": "List accounts for a customer",
+  "queryType": "accounts",
+  "accountAddress": "@customers:{CUSTOMER_ID}:"
+}
+`;
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const { input, previousOutput } = body;
 
-    // Simulate processing delay
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    // Build prompt with all assembled data
+    let userPrompt = 'Assemble the final demo configuration:\n\n';
 
-    // Extract company name from research or use default
-    const companyName = previousOutput?.companyName ?? 'Demo Company';
-    const id = companyName.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-demo';
+    if (previousOutput?.companyName) {
+      userPrompt += `Company: ${previousOutput.companyName}\n`;
+    }
+    if (previousOutput?.businessModel) {
+      userPrompt += `Business Model: ${previousOutput.businessModel}\n`;
+    }
+    if (previousOutput?.suggestedDemoName) {
+      userPrompt += `Suggested Demo Name: ${previousOutput.suggestedDemoName}\n`;
+    }
+    if (previousOutput?.suggestedDescription) {
+      userPrompt += `Suggested Description: ${previousOutput.suggestedDescription}\n`;
+    }
+    if (previousOutput?.accounts) {
+      userPrompt += `\nAccounts:\n${JSON.stringify(previousOutput.accounts, null, 2)}\n`;
+    }
+    if (previousOutput?.variables) {
+      userPrompt += `\nVariables: ${JSON.stringify(previousOutput.variables)}\n`;
+    }
+    if (previousOutput?.transactionSteps) {
+      userPrompt += `\nTransaction Steps:\n${JSON.stringify(previousOutput.transactionSteps, null, 2)}\n`;
+    }
+    if (previousOutput?.currencies) {
+      userPrompt += `\nCurrencies: ${previousOutput.currencies.join(', ')}\n`;
+    }
 
-    const output = {
-      id,
-      name: `${companyName} Wallet Demo`,
-      description: `Customer wallet platform with deposits, transfers, and withdrawals`,
-      accounts: [
-        {
-          address: '@world',
-          name: 'External World',
-          description: 'Money entering/leaving the system',
-          color: 'slate',
-        },
-        {
-          address: '@customers:{CUSTOMER_ID}:available',
-          name: 'Customer Available Balance',
-          description: 'Funds available for use',
-          color: 'green',
-        },
-        {
-          address: '@customers:{CUSTOMER_ID}:pending',
-          name: 'Customer Pending Balance',
-          description: 'Funds awaiting confirmation',
-          color: 'orange',
-        },
-        {
-          address: '@customers:{RECIPIENT_ID}:available',
-          name: 'Recipient Available Balance',
-          description: 'Transfer recipient funds',
-          color: 'blue',
-        },
-        {
-          address: '@platform:revenue',
-          name: 'Platform Revenue',
-          description: 'Fees collected by the platform',
-          color: 'emerald',
-        },
-        {
-          address: '@banks:operating',
-          name: 'Operating Bank Account',
-          description: 'Bank account for withdrawals',
-          color: 'gray',
-        },
-      ],
-      variables: {
-        CUSTOMER_ID: 'cust-alice',
-        RECIPIENT_ID: 'cust-bob',
-        AMOUNT: '10000',
-        TRANSFER_AMOUNT: '5000',
-        FEE_AMOUNT: '100',
-        WITHDRAWAL_AMOUNT: '4900',
-      },
-      transactionSteps: [
-        {
-          txType: 'DEPOSIT_INITIATED',
-          label: 'Deposit Initiated',
-          description: 'Customer initiates a $100 deposit - funds are pending confirmation',
-          numscript: `send [USD/2 {AMOUNT}] (
-  source = @world
-  destination = @customers:{CUSTOMER_ID}:pending
-)
+    if (input?.description) {
+      userPrompt += `\nOriginal business description: ${input.description}\n`;
+    }
 
-set_tx_meta("type", "DEPOSIT_INITIATED")
-set_tx_meta("customer_id", "{CUSTOMER_ID}")`,
-          queries: [
-            {
-              title: 'Pending Balance',
-              description: 'Funds awaiting confirmation',
-              queryType: 'balance' as const,
-              addressFilter: 'customers:{CUSTOMER_ID}:pending',
-            },
-          ],
-        },
-        {
-          txType: 'DEPOSIT_CONFIRMED',
-          label: 'Deposit Confirmed',
-          description: 'Payment confirmed - funds move to available balance',
-          numscript: `send [USD/2 {AMOUNT}] (
-  source = @customers:{CUSTOMER_ID}:pending
-  destination = @customers:{CUSTOMER_ID}:available
-)
+    userPrompt += '\nAssemble these into a complete demo configuration. Output valid JSON only.';
 
-set_tx_meta("type", "DEPOSIT_CONFIRMED")
-set_tx_meta("customer_id", "{CUSTOMER_ID}")`,
-          queries: [
-            {
-              title: 'Available Balance',
-              description: 'Funds now available for use',
-              queryType: 'balance' as const,
-              addressFilter: 'customers:{CUSTOMER_ID}:available',
-            },
-          ],
-        },
-        {
-          txType: 'TRANSFER',
-          label: 'Internal Transfer',
-          description: 'Customer transfers $50 with a $1 fee',
-          numscript: `send [USD/2 {TRANSFER_AMOUNT}] (
-  source = @customers:{CUSTOMER_ID}:available
-  destination = @customers:{RECIPIENT_ID}:available
-)
-
-send [USD/2 {FEE_AMOUNT}] (
-  source = @customers:{CUSTOMER_ID}:available
-  destination = @platform:revenue
-)
-
-set_tx_meta("type", "TRANSFER")
-set_tx_meta("customer_id", "{CUSTOMER_ID}")
-set_tx_meta("recipient_id", "{RECIPIENT_ID}")
-set_tx_meta("fee", "{FEE_AMOUNT}")`,
-          queries: [
-            {
-              title: 'Sender Balance',
-              description: 'Remaining after transfer and fee',
-              queryType: 'balance' as const,
-              addressFilter: 'customers:{CUSTOMER_ID}:available',
-            },
-            {
-              title: 'Recipient Balance',
-              description: 'Funds received',
-              queryType: 'balance' as const,
-              addressFilter: 'customers:{RECIPIENT_ID}:available',
-            },
-            {
-              title: 'Platform Revenue',
-              description: 'Fee collected',
-              queryType: 'balance' as const,
-              addressFilter: 'platform:revenue',
-            },
-          ],
-        },
-        {
-          txType: 'WITHDRAWAL',
-          label: 'Withdrawal',
-          description: 'Recipient withdraws $49 to bank account',
-          numscript: `send [USD/2 {WITHDRAWAL_AMOUNT}] (
-  source = @customers:{RECIPIENT_ID}:available
-  destination = @banks:operating
-)
-
-set_tx_meta("type", "WITHDRAWAL")
-set_tx_meta("customer_id", "{RECIPIENT_ID}")`,
-          queries: [
-            {
-              title: 'Final Recipient Balance',
-              description: 'Remaining after withdrawal',
-              queryType: 'balance' as const,
-              addressFilter: 'customers:{RECIPIENT_ID}:available',
-            },
-          ],
-        },
-      ],
-      usefulQueries: [
-        {
-          title: 'All Customer Balances',
-          description: 'Platform-wide customer liabilities',
-          queryType: 'balance' as const,
-          addressFilter: 'customers:',
-        },
-        {
-          title: 'Customer Journey',
-          description: 'All transactions for the customer',
-          queryType: 'transactions' as const,
-          transactionFilter: {
-            metadata: { customer_id: '{CUSTOMER_ID}' },
-          },
-        },
-        {
-          title: 'All Transfers',
-          description: 'Filter by transaction type',
-          queryType: 'transactions' as const,
-          transactionFilter: {
-            metadata: { type: 'TRANSFER' },
-          },
-        },
-        {
-          title: 'Customer Accounts',
-          description: 'List all accounts for the customer',
-          queryType: 'accounts' as const,
-          accountAddress: 'customers:{CUSTOMER_ID}:',
-        },
-      ],
-    };
+    const response = await callGemini(CONFIG_PROMPT, userPrompt);
+    const output = extractJSON(response);
 
     return NextResponse.json(output);
   } catch (error) {
     console.error('Config generator agent error:', error);
     return NextResponse.json(
-      { error: 'Config generator agent failed' },
+      { error: 'Config generator agent failed', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     );
   }
