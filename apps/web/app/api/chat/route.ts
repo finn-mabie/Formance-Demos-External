@@ -51,7 +51,7 @@ Asset notation: [CURRENCY/DECIMALS AMOUNT]
 - [USD/2 1000] = $10.00 (1000 cents)
 - [USDC/6 1000000] = 1 USDC
 - [BTC/8 100000000] = 1 BTC
-- [USD/2 *] = entire balance
+- Always use explicit amounts (never use *)
 
 Split destinations:
 send [USD/2 10000] (

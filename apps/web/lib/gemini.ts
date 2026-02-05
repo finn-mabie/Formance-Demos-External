@@ -64,7 +64,7 @@ send [ASSET/PRECISION AMOUNT] (
 - \`[USDT/6 1000000]\` = 1 USDT (6 decimal places)
 - \`[BTC/8 100000000]\` = 1 BTC
 - \`[MXN/2 850000]\` = 8,500 MXN
-- \`[USD/2 *]\` = entire balance
+- **NEVER use \`*\` (send all)** - always specify explicit amounts
 
 ### Special Accounts
 - \`@world\` = external money (always allows overdraft, represents money entering/leaving system)
@@ -537,8 +537,8 @@ send [USD/2 100000] (
   source = @users:{USER_ID}:bank:pending
   destination = @world
 )
-// Freeze remaining assets
-send [USDC/6 *] (
+// Freeze remaining assets (specify exact amount)
+send [USDC/6 5000000000] (
   source = @users:{USER_ID}:crypto:available
   destination = @users:{USER_ID}:frozen
 )
@@ -598,13 +598,13 @@ set_tx_meta("type", "DEPOSIT")
 set_tx_meta("asset", "USDC")
 \`\`\`
 
-3. **Deposits Confirmed** (block confirmations received)
+3. **Deposits Confirmed** (block confirmations received - use explicit amounts, NEVER use *)
 \`\`\`numscript
-send [ETH/18 *] (
+send [ETH/18 500000000000000000000] (
   source = @clients:genesis:trader:bob:pending
   destination = @clients:genesis:trader:bob:available
 )
-send [USDC/6 *] (
+send [USDC/6 10000000000000] (
   source = @clients:genesis:trader:bob:pending
   destination = @clients:genesis:trader:bob:available
 )

@@ -23,6 +23,7 @@ Write Numscript code for each transaction step in the flow.
    - Target asset: @world → Exchange → Customer
    - This creates proper horizontal arrows in diagrams
 9. **Platform fees go to @platform:revenue** - not issuer:revenue or similar
+10. **NEVER use * (send all) syntax** - Always specify explicit amounts. The * syntax is NOT supported.
 
 ## Numscript Syntax Reference
 
@@ -40,12 +41,6 @@ send [USD/2 10000] (
     2.5% to @platform:fees
     remaining to @merchants:{MERCHANT_ID}:available
   }
-)
-
-// Send entire balance
-send [USD/2 *] (
-  source = @escrow:{ORDER_ID}
-  destination = @merchants:{MERCHANT_ID}:available
 )
 
 // PSP crediting (allows overdraft)
