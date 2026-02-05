@@ -1,0 +1,258 @@
+@import url('https://fonts.googleapis.com/css2?family=Figtree:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --font-sans: 'Figtree', system-ui, sans-serif;
+    --font-mono: 'Space Mono', ui-monospace, monospace;
+
+    /* Emerald-based light theme matching Formance console */
+    --white: 0 0% 100%;
+    --black: 166 30% 15%;
+
+    --primary: 166 50% 20%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 166 20% 95%;
+    --secondary-foreground: 166 30% 15%;
+
+    --background: 166 15% 98%;
+    --foreground: 166 30% 15%;
+
+    --muted: 166 20% 95%;
+    --muted-foreground: 166 20% 40%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 166 30% 15%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 166 30% 15%;
+
+    --border: 166 15% 88%;
+    --input: 166 15% 88%;
+
+    --accent: 166 20% 95%;
+    --accent-foreground: 166 50% 20%;
+
+    --ring: 166 40% 50%;
+    --radius: 0.5rem;
+
+    /* Custom colors */
+    --header-height: 64px;
+
+    /* Semantic colors */
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 142 76% 36%;
+    --success-foreground: 0 0% 100%;
+
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
+
+    --info: 199 89% 48%;
+    --info-foreground: 0 0% 100%;
+
+    /* Color palette */
+    --emerald-50: 152 81% 96%;
+    --emerald-100: 149 80% 90%;
+    --emerald-200: 152 76% 80%;
+    --emerald-300: 156 72% 67%;
+    --emerald-400: 158 64% 52%;
+    --emerald-500: 160 84% 39%;
+    --emerald-600: 161 94% 30%;
+    --emerald-700: 163 94% 24%;
+    --emerald-800: 163 88% 20%;
+    --emerald-900: 164 86% 16%;
+
+    --blue-50: 214 100% 97%;
+    --blue-100: 214 95% 93%;
+    --blue-500: 217 91% 60%;
+    --blue-600: 221 83% 53%;
+
+    --purple-50: 270 100% 98%;
+    --purple-100: 269 100% 92%;
+    --purple-500: 271 91% 65%;
+    --purple-600: 271 81% 56%;
+
+    --red-50: 0 86% 97%;
+    --red-100: 0 93% 94%;
+    --red-500: 0 84% 60%;
+    --red-600: 0 72% 51%;
+
+    --orange-50: 33 100% 96%;
+    --orange-100: 34 100% 92%;
+    --orange-500: 25 95% 53%;
+    --orange-600: 21 90% 48%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+/* Custom utility classes for demo components */
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 font-medium transition-colors rounded-lg;
+  }
+
+  .btn-primary {
+    @apply btn bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2;
+  }
+
+  .btn-secondary {
+    @apply btn bg-muted hover:bg-accent border border-border text-foreground px-4 py-2;
+  }
+
+  .btn-ghost {
+    @apply btn hover:bg-accent text-foreground px-4 py-2;
+  }
+
+  .btn-outline {
+    @apply btn border border-border bg-transparent hover:bg-muted text-foreground px-4 py-2;
+  }
+
+  .btn-sm {
+    @apply px-3 py-1.5 text-sm;
+  }
+
+  .btn-lg {
+    @apply px-6 py-3 text-base;
+  }
+
+  .chip {
+    @apply inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium;
+  }
+
+  .chip-mint {
+    @apply bg-emerald-100 text-emerald-700;
+  }
+
+  .chip-blue {
+    @apply bg-blue-100 text-blue-600;
+  }
+
+  .chip-purple {
+    @apply bg-purple-100 text-purple-600;
+  }
+
+  .chip-orange {
+    @apply bg-orange-100 text-orange-600;
+  }
+
+  .chip-slate {
+    @apply bg-gray-100 text-gray-600;
+  }
+
+  .chip-red {
+    @apply bg-red-100 text-red-600;
+  }
+
+  .chip-secondary {
+    @apply bg-muted text-muted-foreground;
+  }
+
+  .card {
+    @apply bg-card border border-border rounded-xl;
+  }
+
+  /* Account color classes - muted styling matching Formance console */
+  .account-blue {
+    @apply bg-muted/50 text-foreground border-blue-300/50;
+  }
+
+  .account-green {
+    @apply bg-muted/50 text-foreground border-emerald-300/50;
+  }
+
+  .account-purple {
+    @apply bg-muted/50 text-foreground border-purple-300/50;
+  }
+
+  .account-orange {
+    @apply bg-muted/50 text-foreground border-orange-300/50;
+  }
+
+  .account-red {
+    @apply bg-muted/50 text-foreground border-red-300/50;
+  }
+
+  .account-slate {
+    @apply bg-muted/50 text-foreground border-border;
+  }
+}
+
+/* Code blocks */
+pre {
+  @apply bg-slate-900 text-slate-100 rounded-xl p-4 overflow-x-auto text-sm font-mono;
+}
+
+code {
+  font-family: var(--font-mono);
+  @apply text-sm;
+}
+
+/* Account address styling */
+.account-chip {
+  @apply font-mono text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded;
+}
+
+/* Progress bar */
+.progress-bar {
+  @apply h-2 bg-muted rounded-full overflow-hidden;
+}
+
+.progress-bar-fill {
+  @apply h-full bg-emerald-500 transition-all duration-300;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-muted/30 rounded;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-gray-300 rounded hover:bg-gray-400;
+}
+
+/* Custom animations */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+/* Excalidraw container */
+.excalidraw-container {
+  @apply bg-white rounded-lg border border-border overflow-hidden;
+}
+
+/* Ensure proper height for Excalidraw */
+.excalidraw-wrapper {
+  width: 100%;
+  height: 400px;
+}
