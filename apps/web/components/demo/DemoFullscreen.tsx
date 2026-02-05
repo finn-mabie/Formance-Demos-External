@@ -7,7 +7,6 @@ import { DemoStep } from './DemoStep';
 import { DemoExplore } from './DemoExplore';
 import { BalanceSidebar } from './BalanceSidebar';
 import { DemoHeader } from './DemoHeader';
-import { GibonChat } from './GibonChat';
 
 export function DemoFullscreen() {
   const { config, currentStep } = useDemoStore();
@@ -39,9 +38,6 @@ export function DemoFullscreen() {
         {/* Right Sidebar - Account Balances */}
         <BalanceSidebar />
       </div>
-
-      {/* Gibon Chat Assistant */}
-      <GibonChat />
     </div>
   );
 }
