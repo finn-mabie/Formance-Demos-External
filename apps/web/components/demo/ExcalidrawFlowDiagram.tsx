@@ -317,18 +317,39 @@ function postingsToElements(postings: Posting[]): ExcalidrawElementAny[] {
     }
   }
 
+  // Group postings by source-destination pair to handle multiple arrows
+  const arrowGroups = new Map<string, { postings: Posting[]; fromPos: { x: number; y: number }; toPos: { x: number; y: number } }>();
+
   for (const p of postings) {
     const fromPos = accountPositions.get(p.source);
     const toPos = accountPositions.get(p.destination);
 
     if (fromPos && toPos) {
-      const fromX = fromPos.x + boxWidth / 2;
+      const key = `${p.source}->${p.destination}`;
+      if (!arrowGroups.has(key)) {
+        arrowGroups.set(key, { postings: [], fromPos, toPos });
+      }
+      arrowGroups.get(key)!.postings.push(p);
+    }
+  }
+
+  // Draw arrows with offset for multiple arrows between same accounts
+  for (const [, group] of arrowGroups) {
+    const { postings: groupPostings, fromPos, toPos } = group;
+    const count = groupPostings.length;
+    const offsetStep = 40; // Horizontal offset between parallel arrows
+    const totalOffset = (count - 1) * offsetStep;
+    const startOffset = -totalOffset / 2;
+
+    groupPostings.forEach((p, idx) => {
+      const offset = startOffset + idx * offsetStep;
+      const fromX = fromPos.x + boxWidth / 2 + offset;
       const fromY = fromPos.y + boxHeight;
-      const toX = toPos.x + boxWidth / 2;
+      const toX = toPos.x + boxWidth / 2 + offset;
       const toY = toPos.y;
 
       elements.push(...createArrow(fromX, fromY, toX, toY, p.amount));
-    }
+    });
   }
 
   return elements;

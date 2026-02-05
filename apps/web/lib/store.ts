@@ -141,8 +141,15 @@ export const useDemoStore = create<DemoState>()((set, get) => ({
         } else if (query.addressFilter) {
           // Single pattern balance query
           const pattern = substituteVars(query.addressFilter);
-          const balances = ledger.getBalances(pattern);
-          result = { type: 'balance', data: balances, timestamp: new Date() };
+          // Use aggregated balances for prefix patterns (ending with :) or wildcard patterns (::)
+          // This gives a single total rather than individual account balances
+          if (pattern.endsWith(':') || pattern.includes('::')) {
+            const aggregated = ledger.getAggregatedBalances([pattern]);
+            result = { type: 'balance', data: aggregated, timestamp: new Date() };
+          } else {
+            const balances = ledger.getBalances(pattern);
+            result = { type: 'balance', data: balances, timestamp: new Date() };
+          }
         } else {
           result = { type: 'balance', data: [], timestamp: new Date() };
         }
