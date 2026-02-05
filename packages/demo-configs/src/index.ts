@@ -1,7 +1,4 @@
-export { sportsbetConfig } from './sportsbet';
 export { coinsPhConfig } from './coins-ph';
-export { monetaeConfig } from './monetae';
-export { rainConfig } from './rain';
 
 export {
   type DemoConfig,
@@ -16,20 +13,14 @@ export {
   type TransactionFilterOptions,
 } from './types';
 
-import { sportsbetConfig } from './sportsbet';
 import { coinsPhConfig } from './coins-ph';
-import { monetaeConfig } from './monetae';
-import { rainConfig } from './rain';
 import { DemoConfig } from './types';
 
 /**
  * All available demo configurations
  */
 export const DEMO_CONFIGS: Record<string, DemoConfig> = {
-  sportsbet: sportsbetConfig,
   'coins-ph': coinsPhConfig,
-  monetae: monetaeConfig,
-  rain: rainConfig,
 };
 
 /**
