@@ -152,12 +152,82 @@ send [USDC/6 500000000000] (
 )
 send [USDC/6 5000000000] (
   source = @clients:genesis:trader:bob:available
-  destination = @zodia:fees
+  destination = @platform:fees
 )
 set_tx_meta("type", "STAKING_LOCK")
 \`\`\`
 
 This creates ONE transaction with TWO postings (two arrows in diagram), executed atomically.
+
+### Rule 4: EXCHANGE PATTERN FOR CURRENCY CONVERSION (CRITICAL FOR DIAGRAMS)
+When converting between currencies/assets (FX, mint/burn tokens, buy/sell crypto), you MUST use the exchange pattern with BIDIRECTIONAL @world flows. This ensures proper diagram visualization with horizontal parallel arrows.
+
+**THE PATTERN:**
+1. Source asset flows: Customer → Exchange → @world
+2. Target asset flows: @world → Exchange → Customer
+3. Fee flows: Exchange → Platform Revenue
+
+**CORRECT EXCHANGE PATTERN ✓:**
+\`\`\`numscript
+// 1. Customer sends source asset to exchange
+send [USD/2 100000000] (
+  source = @customers:{CUSTOMER_ID}:available
+  destination = @exchanges:{EXCHANGE_ID}
+)
+
+// 2. Source asset exits system via @world (REQUIRED for diagram)
+send [USD/2 99900000] (
+  source = @exchanges:{EXCHANGE_ID}
+  destination = @world
+)
+
+// 3. Target asset enters system via @world (REQUIRED for diagram)
+send [USDC/6 999000000000] (
+  source = @world
+  destination = @exchanges:{EXCHANGE_ID}
+)
+
+// 4. Target asset goes to customer
+send [USDC/6 999000000000] (
+  source = @exchanges:{EXCHANGE_ID}
+  destination = @customers:{CUSTOMER_ID}:crypto
+)
+
+// 5. Fee goes to platform
+send [USD/2 100000] (
+  source = @exchanges:{EXCHANGE_ID}
+  destination = @platform:revenue
+)
+\`\`\`
+
+**WHY THIS MATTERS:**
+- The diagram shows @world as a "sidecar" to the right of the exchange
+- Two horizontal arrows show what goes OUT to @world and what comes IN from @world
+- This visually represents the conversion/swap happening
+- Without bidirectional @world flows, the diagram will look broken
+
+**WRONG - Missing @world flows ❌:**
+\`\`\`numscript
+// DON'T DO THIS - breaks diagram visualization
+send [USD/2 100000000] (
+  source = @customers:{CUSTOMER_ID}:available
+  destination = @exchanges:{EXCHANGE_ID}
+)
+send [USD/2 100000000] (
+  source = @exchanges:{EXCHANGE_ID}
+  destination = @issuer:reserve  // Wrong! Should go to @world
+)
+send [USDC/6 1000000000000] (
+  source = @world
+  destination = @customers:{CUSTOMER_ID}:crypto  // Wrong! Should go through exchange
+)
+\`\`\`
+
+**USE FOR:**
+- Currency exchange (USD → USDT, EUR → GBP)
+- Token minting (USD in → Tokens out)
+- Token burning/redemption (Tokens in → USD out)
+- Crypto buy/sell (Fiat → Crypto, Crypto → Fiat)
 
 ---
 
@@ -617,6 +687,282 @@ Buyer funds order, seller fulfills, platform takes commission.
 ### Intercompany
 - Intercompany debt typically denominated in stable reference currency (USD), not transfer currency
 - Use \`@interco:{ENTITY}:debt\` and \`@interco:{ENTITY}:credit\`
+
+---
+
+## INDUSTRY-SPECIFIC DOMAIN KNOWLEDGE
+
+### CRYPTO REMITTANCE (from real customer implementations)
+
+**Business Model**: "Stablecoin sandwich" - USD deposits on one end, stablecoins in the middle for cross-border, local fiat payout at destination.
+
+**Key Pain Points**:
+- VASP (Virtual Asset Service Provider) regulation compliance
+- Audit requirements - spreadsheet tracking is common but insufficient
+- Multi-entity structures (e.g., Philippines entity receives USD, converts to stablecoin, Brazil entity receives and converts to local currency)
+- Cannot receive USD directly in some jurisdictions (Brazil), so stablecoins become the bridge
+
+**Typical Flow**:
+1. Sending entity receives fiat (e.g., USD from client)
+2. Convert to stablecoin (USDT/USDC) on the sending side
+3. Transfer stablecoin on-chain to receiving entity
+4. Receiving entity sells stablecoin for local currency
+5. Local currency payout via local rails (SPEI in Mexico, PIX in Brazil)
+
+**Entities to Model**:
+- Treasury accounts at exchanges (Binance, Coins.ph, local exchanges)
+- Bank accounts (operating, pending, holding)
+- Platform fee accounts (transaction fees, FX spread)
+- Compliance hold accounts
+- Liquidity provider tracking
+
+**Real Example Variables**:
+- SENDER_NAME: "carlos" (not "sender001")
+- RECIPIENT_NAME: "maria" (not "recipient001")
+- EXCHANGE: "bitso", "binance", "coinbase"
+- BANK: "banorte", "santander", "bpi"
+
+---
+
+### SPORTS BETTING / GAMING (from real customer implementations)
+
+**Business Model**: Wallet-based wagering platform with deposit/withdrawal flows and wager lifecycle.
+
+**Key Pain Points**:
+- Legacy monolith platforms being unbundled
+- Need internal ledger between PSP/orchestrator and betting engine
+- Eligibility checks (safer gambling, fraud, suspensions) before payment processing
+- Want customers to re-spend winnings rather than withdraw
+
+**Typical Flow**:
+1. Customer deposits $100 via card/bank/wallet
+2. Funds become available in customer wallet
+3. Customer places $10 wager (funds move to wager hold)
+4. Wager resolves (win/lose)
+5. Winnings credited back to wallet OR funds forfeited
+6. Customer can withdraw or re-wager
+
+**Key Accounts**:
+- \`@customers:{NAME}:available\` - Spendable balance
+- \`@customers:{NAME}:held:wager:{WAGER_ID}\` - Funds locked for active bets
+- \`@platform:revenue\` - House winnings
+- \`@platform:payouts\` - Payout pool for winners
+- \`@psp:{PROVIDER}\` - Payment processor integration
+
+**Critical Design Points**:
+- Wager hold is temporary - returns to customer (win) or goes to platform (loss)
+- Single currency usually (AUD for Australian sportsbooks)
+- PSP orchestrator pattern common (Bridge, Primer, Gr4vy)
+- Direct PSP fallback needed for orchestrator downtime
+- Auth rates and cost optimization drive PSP selection
+
+**Real Example Variables**:
+- CUSTOMER_NAME: "dave", "mel", "neil" (not "user001")
+- WAGER_ID: "wager001"
+- PROVIDER: "bridge", "stripe", "afterpay"
+
+---
+
+### CRYPTO EXCHANGE (from real customer implementations)
+
+**Business Model**: Centralized exchange with trading, custody, and fiat rails.
+
+**Key Pain Points**:
+- Home-built ledgers are common but fragile ("it works, don't touch it")
+- Audit difficulties - can track money but no dashboards
+- Immutability concerns - internal threats can modify ledgers
+- No true double-entry between accounts
+- Connectivity gap between ledger and external systems (Fireblocks, banks)
+
+**Typical Flow**:
+1. Customer deposits fiat via bank
+2. Customer buys crypto (fiat debited, crypto credited)
+3. Customer trades (atomic swap between assets)
+4. Customer withdraws crypto (internal debit, on-chain send)
+
+**Key Accounts**:
+- \`@users:{NAME}:fiat:available\` - Fiat balance
+- \`@users:{NAME}:crypto:available\` - Crypto balance (multi-asset)
+- \`@exchange:orderbook:{PAIR}\` - Trading pair liquidity
+- \`@custody:hot\` - Hot wallet
+- \`@custody:cold\` - Cold storage
+- \`@platform:fees\` - Trading fees
+
+**Integration Points**:
+- Custody providers: Fireblocks, BitGo, Copper
+- Banking: Various regional banks
+- On-chain: Direct node or custody API
+
+**Real Example Variables**:
+- USER_NAME: "simon", "julian" (not "user001")
+- PAIR: "btcusd", "ethusdc"
+
+---
+
+### WEALTH MANAGEMENT / WEALTHTECH (from real customer implementations)
+
+**Business Model**: Investment platform where users buy/sell securities, platform executes through brokers.
+
+**Key Pain Points**:
+- Cash pending vs available states during trade settlement
+- Investment portfolio tracking (multiple asset types)
+- Trade execution creates intermediate states
+- ETF/stock/bond holdings in same account
+
+**Typical Flow**:
+1. User deposits cash (available for investing)
+2. User places sell order (shares move to exchange account)
+3. Broker executes trade
+4. Cash received but pending (T+2 settlement)
+5. Cash becomes available for withdrawal
+
+**Key Accounts**:
+- \`@users:{NAME}:cash:available\` - Spendable cash
+- \`@users:{NAME}:cash:pending\` - Cash from unsettled trades (can re-invest, cannot withdraw)
+- \`@users:{NAME}:investments\` - Securities holdings (multi-asset: stocks, ETFs, bonds)
+- \`@exchange:{TRADE_ID}\` - Trade execution tracking
+- \`@broker:settlement\` - Broker integration account
+
+**Critical Design Points**:
+- One account per trade ID allows metadata attachment (price, time, etc.)
+- High volume may use common exchange account with transaction metadata instead
+- Users can reinvest pending cash but cannot withdraw until settled
+- All trades go through broker (platform doesn't hold liquidity pools)
+
+**Real Example Variables**:
+- USER_NAME: "marco", "guido", "ale" (not "user001")
+- TRADE_ID: "trade001"
+- ASSET: "TSLA/0" (0 decimals for shares), "AAPL/0"
+
+---
+
+### HOSPITALITY PAYMENTS / HIGH-THROUGHPUT (from real customer implementations)
+
+**Business Model**: Payment gateway/processor handling high transaction volumes across multiple acquirers.
+
+**Key Pain Points**:
+- Contention on heavily-used accounts (acquirer receivables)
+- Single-threaded queue processing creates bottlenecks
+- Hash log writes slow down transaction commits
+- Need bucket/ledger segregation for scale
+
+**Performance Patterns**:
+- Bucket per acquirer (isolate workloads)
+- Account sharding for hot accounts (split receivables across N accounts)
+- Async hash log writes
+- Bulk transaction endpoints (100 txns in 1 request vs 100 requests)
+- Worker parallelism based on sharded accounts
+
+**Key Accounts**:
+- \`@acquirer:{NAME}:receivable:{SHARD}\` - Sharded for throughput
+- \`@merchants:{NAME}:balance\` - Merchant settlement account
+- \`@platform:float\` - Working capital
+
+**Critical Design Points**:
+- Contention happens when many transactions hit same source account
+- Solution: Shard the hot account (e.g., 5 receivable accounts, round-robin)
+- Bulk endpoint: Send multiple transactions in single HTTP request
+- Monitoring: Trace IDs correlation between systems
+
+**Real Example Variables**:
+- ACQUIRER: "adyen", "worldpay", "checkout"
+- MERCHANT_NAME: "hilton", "marriott", "booking"
+- SHARD: "01", "02", "03"
+
+---
+
+### CARD ISSUING / PROCESSOR (from real customer implementations)
+
+**Business Model**: Card issuing processor handling authorization and settlement for credit/debit cards.
+
+**Key Pain Points**:
+- Authorization latency critical (must respond in hundreds of milliseconds)
+- Two-phase commit: Authorization → Settlement/Posting (can be different amounts!)
+- Partial confirmations, reversals, chargebacks
+- Account hierarchy for corporate cards (company → departments → employees → cards)
+
+**Performance Considerations**:
+- ~100 TPS per account due to linearization (balance locking)
+- Multi-thousand TPS at ledger level with parallel transactions
+- Async hash log writes improve performance significantly
+- Account hierarchy creates linearization chains (contention risk)
+
+**Typical Flow**:
+1. Card swipe → Authorization request
+2. Check balance/credit limit (must be fast!)
+3. Create hold on available balance
+4. Later: Settlement/Posting (may differ from auth amount)
+5. Handle edge cases: partial settlement, higher amount, reversals
+
+**Key Accounts**:
+- \`@cardholders:{NAME}:available\` - Spendable balance
+- \`@cardholders:{NAME}:held:{AUTH_ID}\` - Authorization holds
+- \`@cardholders:{NAME}:credit:limit\` - Credit limit tracking
+- \`@issuer:settlement\` - Settlement pool
+- \`@issuer:fees\` - Interchange/fees
+
+**Multi-benefit Card Complexity**:
+Some cards have multiple budgets (e.g., company mobility budget + personal meal vouchers):
+- Same card, different accounts
+- Employee leaves company → disable company budget but keep personal budget
+- Requires careful account separation
+
+**Real Example Variables**:
+- CARDHOLDER_NAME: "gordon", "leo", "thierry"
+- AUTH_ID: "auth001"
+- FORM_FACTOR: "physical", "apple", "google"
+
+---
+
+### DIGITAL ASSETS / COLOR OF MONEY (from real customer implementations)
+
+**Business Model**: Tracking the provenance of assets (e.g., USDT from different blockchains).
+
+**Key Concept - Color of Money**:
+When the same asset (e.g., USDT) comes from different sources (Ethereum vs Tron), you may need to track them separately for compliance while treating them as fungible for spending.
+
+**Use Cases**:
+- Track stablecoin by originating blockchain
+- Track funds by compliance status (KYC'd vs not)
+- Track promotional credits vs real money
+
+**Implementation Pattern**:
+Instead of a single "USDT" asset, use asset variants:
+- \`USDT:ETH/6\` - USDT from Ethereum
+- \`USDT:TRX/6\` - USDT from Tron
+
+Or use metadata to track origin while keeping asset fungible.
+
+---
+
+### FX / TREASURY MANAGEMENT (from real customer implementations)
+
+**Business Model**: Managing foreign exchange conversions and treasury operations.
+
+**Key Concepts**:
+- Conversion accounts to track FX trades
+- Spread capture as revenue
+- Intercompany debt tracking (denominated in stable currency like USD)
+- Multi-currency customer accounts
+
+**Typical Flow**:
+1. Customer initiates conversion (EUR to USD)
+2. Create conversion account for trade tracking
+3. Debit EUR from customer
+4. Credit USD to customer
+5. Record FX rate and spread in metadata
+
+**Key Accounts**:
+- \`@customers:{NAME}:available\` - Multi-currency balance
+- \`@conversions:{TRADE_ID}\` - Individual trade tracking
+- \`@treasury:working\` - Working capital
+- \`@platform:fx:spread\` - FX revenue
+- \`@interco:{ENTITY}:debt\` - Intercompany tracking
+
+**Important Notes**:
+- Intercompany debt should be in stable reference currency (USD)
+- One account per trade allows metadata storage (rate, time, counterparty)
+- High-volume may use shared conversion account with transaction metadata
 `;
 
 export const DEMO_OUTPUT_FORMAT = `

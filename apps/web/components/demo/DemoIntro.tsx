@@ -63,6 +63,11 @@ export function DemoIntro() {
         <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
           {config.description}
         </p>
+        {/* Start button - prominently placed */}
+        <button onClick={() => goToStep(0)} className="btn-primary btn-lg px-8 mt-6">
+          Start Demo
+          <ArrowRight className="h-5 w-5 ml-2" />
+        </button>
       </div>
 
       {/* Disclaimer banner */}
@@ -164,13 +169,6 @@ export function DemoIntro() {
         </div>
       </div>
 
-      {/* Start button */}
-      <div className="text-center pt-4">
-        <button onClick={() => goToStep(0)} className="btn-primary btn-lg px-8">
-          Start Demo
-          <ArrowRight className="h-5 w-5 ml-2" />
-        </button>
-      </div>
     </div>
   );
 }

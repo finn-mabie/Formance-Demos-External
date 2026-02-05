@@ -18,6 +18,11 @@ Write Numscript code for each transaction step in the flow.
 5. **NEVER use "allowing unbounded overdraft" on @world** - it already allows overdraft
 6. **Use "allowing unbounded overdraft" on PSP accounts** - when they credit before settlement
 7. **Include set_tx_meta for tracking** - type, IDs, relevant context
+8. **EXCHANGE PATTERN (CRITICAL)** - For currency conversions, minting, or burning, ALWAYS use bidirectional @world flows through an exchange account:
+   - Source asset: Customer → Exchange → @world
+   - Target asset: @world → Exchange → Customer
+   - This creates proper horizontal arrows in diagrams
+9. **Platform fees go to @platform:revenue** - not issuer:revenue or similar
 
 ## Numscript Syntax Reference
 

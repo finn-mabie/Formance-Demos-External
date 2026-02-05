@@ -1,4 +1,6 @@
 export { coinsPhConfig } from './coins-ph';
+export { cedefiCustodyConfig } from './cedefi-custody';
+export { stablecoinIssuanceConfig } from './stablecoin-issuance';
 
 export {
   type DemoConfig,
@@ -14,6 +16,8 @@ export {
 } from './types';
 
 import { coinsPhConfig } from './coins-ph';
+import { cedefiCustodyConfig } from './cedefi-custody';
+import { stablecoinIssuanceConfig } from './stablecoin-issuance';
 import { DemoConfig } from './types';
 
 /**
@@ -21,6 +25,8 @@ import { DemoConfig } from './types';
  */
 export const DEMO_CONFIGS: Record<string, DemoConfig> = {
   'coins-ph': coinsPhConfig,
+  'cedefi-custody': cedefiCustodyConfig,
+  'stablecoin-issuance': stablecoinIssuanceConfig,
 };
 
 /**

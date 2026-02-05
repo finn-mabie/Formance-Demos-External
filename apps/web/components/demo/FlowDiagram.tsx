@@ -1,7 +1,6 @@
 'use client';
 
-import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
-import { Save, RotateCcw, Plus, Trash2, X } from 'lucide-react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 
 type NodeData = {
   id: string;
@@ -67,7 +66,7 @@ function formatAmount(amount: string): string {
 }
 
 function getStorageKey(demoName: string, txType: string): string {
-  return `flow-diagram-v2-${demoName}-${txType}`;
+  return `flow-diagram-v5-${demoName}-${txType}`;
 }
 
 function generateId(): string {
@@ -95,14 +94,22 @@ function postingsToInitialState(postings: Posting[]): DiagramState {
     inflows.get(p.destination)!.push(p.source);
   }
 
+  // Detect exchange accounts - accounts named "exchange" that interact with @world
+  // These should have @world as a sidecar regardless of flow direction
   const worldSidecars = new Set<string>();
   for (const p of postings) {
     if (p.source === 'world' || p.destination === 'world') {
       const other = p.source === 'world' ? p.destination : p.source;
+
+      // Check if account name contains "exchange" - these always get world as sidecar
+      const isExchangeByName = other.toLowerCase().includes('exchange');
+
+      // Also check for bidirectional flows (original logic)
       const hasBothDirections =
         postings.some((r) => r.source === other && r.destination === 'world') &&
         postings.some((r) => r.source === 'world' && r.destination === other);
-      if (hasBothDirections) {
+
+      if (hasBothDirections || isExchangeByName) {
         worldSidecars.add(other);
       }
     }
@@ -233,16 +240,7 @@ export function FlowDiagram({ postings, txType, demoName, description }: Props) 
   const initialState = useMemo(() => postingsToInitialState(postings), [postings]);
 
   const [state, setState] = useState<DiagramState>(initialState);
-  const [selectedNode, setSelectedNode] = useState<string | null>(null);
-  const [selectedArrow, setSelectedArrow] = useState<string | null>(null);
-  const [editingNode, setEditingNode] = useState<string | null>(null);
-  const [editingArrow, setEditingArrow] = useState<string | null>(null);
-  const [dragging, setDragging] = useState<string | null>(null);
-  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
-  const [hasChanges, setHasChanges] = useState(false);
-  const [creatingArrow, setCreatingArrow] = useState<string | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const saved = localStorage.getItem(storageKey);
@@ -258,180 +256,9 @@ export function FlowDiagram({ postings, txType, demoName, description }: Props) 
     }
   }, [storageKey, initialState]);
 
-  useEffect(() => {
-    if ((editingNode || editingArrow) && inputRef.current) {
-      inputRef.current.focus();
-      inputRef.current.select();
-    }
-  }, [editingNode, editingArrow]);
-
   const nodeHeight = 44;
 
-  const getNodeById = useCallback(
-    (id: string) => state.nodes.find((n) => n.id === id),
-    [state.nodes]
-  );
-
-  const handleNodeMouseDown = useCallback(
-    (nodeId: string, e: React.MouseEvent) => {
-      if (editingNode) return;
-      e.stopPropagation();
-
-      if (creatingArrow) {
-        if (creatingArrow !== nodeId) {
-          setState((prev) => ({
-            ...prev,
-            arrows: [
-              ...prev.arrows,
-              {
-                id: generateId(),
-                from: creatingArrow,
-                to: nodeId,
-                label: '$0',
-              },
-            ],
-          }));
-          setHasChanges(true);
-        }
-        setCreatingArrow(null);
-        return;
-      }
-
-      const node = getNodeById(nodeId);
-      if (!node) return;
-
-      const svg = svgRef.current;
-      if (!svg) return;
-
-      const rect = svg.getBoundingClientRect();
-      setDragging(nodeId);
-      setSelectedNode(nodeId);
-      setSelectedArrow(null);
-      setDragOffset({
-        x: e.clientX - rect.left - node.x,
-        y: e.clientY - rect.top - node.y,
-      });
-    },
-    [creatingArrow, editingNode, getNodeById]
-  );
-
-  const handleMouseMove = useCallback(
-    (e: React.MouseEvent) => {
-      if (!dragging) return;
-
-      const svg = svgRef.current;
-      if (!svg) return;
-
-      const rect = svg.getBoundingClientRect();
-      const newX = Math.max(0, e.clientX - rect.left - dragOffset.x);
-      const newY = Math.max(0, e.clientY - rect.top - dragOffset.y);
-
-      setState((prev) => ({
-        ...prev,
-        nodes: prev.nodes.map((n) => (n.id === dragging ? { ...n, x: newX, y: newY } : n)),
-      }));
-      setHasChanges(true);
-    },
-    [dragging, dragOffset]
-  );
-
-  const handleMouseUp = useCallback(() => {
-    setDragging(null);
-  }, []);
-
-  const handleSvgClick = useCallback((e: React.MouseEvent) => {
-    if (e.target === svgRef.current) {
-      setSelectedNode(null);
-      setSelectedArrow(null);
-      setCreatingArrow(null);
-    }
-  }, []);
-
-  const handleArrowClick = useCallback((arrowId: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setSelectedArrow(arrowId);
-    setSelectedNode(null);
-  }, []);
-
-  const handleNodeDoubleClick = useCallback((nodeId: string) => {
-    setEditingNode(nodeId);
-  }, []);
-
-  const handleArrowDoubleClick = useCallback((arrowId: string) => {
-    setEditingArrow(arrowId);
-  }, []);
-
-  const handleNodeLabelChange = useCallback((nodeId: string, newLabel: string) => {
-    setState((prev) => ({
-      ...prev,
-      nodes: prev.nodes.map((n) => (n.id === nodeId ? { ...n, label: newLabel } : n)),
-    }));
-    setHasChanges(true);
-  }, []);
-
-  const handleArrowLabelChange = useCallback((arrowId: string, newLabel: string) => {
-    setState((prev) => ({
-      ...prev,
-      arrows: prev.arrows.map((a) => (a.id === arrowId ? { ...a, label: newLabel } : a)),
-    }));
-    setHasChanges(true);
-  }, []);
-
-  const handleEditKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' || e.key === 'Escape') {
-      setEditingNode(null);
-      setEditingArrow(null);
-    }
-  }, []);
-
-  const addNode = useCallback(() => {
-    const newNode: NodeData = {
-      id: generateId(),
-      label: '@new:account',
-      x: 100 + Math.random() * 200,
-      y: 100 + Math.random() * 100,
-    };
-    setState((prev) => ({ ...prev, nodes: [...prev.nodes, newNode] }));
-    setSelectedNode(newNode.id);
-    setHasChanges(true);
-  }, []);
-
-  const deleteSelected = useCallback(() => {
-    if (selectedNode) {
-      setState((prev) => ({
-        nodes: prev.nodes.filter((n) => n.id !== selectedNode),
-        arrows: prev.arrows.filter((a) => a.from !== selectedNode && a.to !== selectedNode),
-      }));
-      setSelectedNode(null);
-      setHasChanges(true);
-    } else if (selectedArrow) {
-      setState((prev) => ({
-        ...prev,
-        arrows: prev.arrows.filter((a) => a.id !== selectedArrow),
-      }));
-      setSelectedArrow(null);
-      setHasChanges(true);
-    }
-  }, [selectedNode, selectedArrow]);
-
-  const startArrowCreation = useCallback(() => {
-    if (selectedNode) {
-      setCreatingArrow(selectedNode);
-    }
-  }, [selectedNode]);
-
-  const handleSave = useCallback(() => {
-    localStorage.setItem(storageKey, JSON.stringify(state));
-    setHasChanges(false);
-  }, [state, storageKey]);
-
-  const handleReset = useCallback(() => {
-    localStorage.removeItem(storageKey);
-    setState(initialState);
-    setHasChanges(false);
-    setSelectedNode(null);
-    setSelectedArrow(null);
-  }, [storageKey, initialState]);
+  const getNodeById = (id: string) => state.nodes.find((n) => n.id === id);
 
   if (postings.length === 0 && state.nodes.length === 0) return null;
 
@@ -448,71 +275,12 @@ export function FlowDiagram({ postings, txType, demoName, description }: Props) 
       {description && <p className="text-sm text-muted-foreground">{description}</p>}
 
       <div className="border border-border rounded-lg overflow-hidden bg-white">
-        {/* Toolbar */}
-        <div className="flex items-center justify-between px-3 py-2 border-b border-border bg-muted/30 flex-wrap gap-2">
-          <div className="flex items-center gap-2">
-            <button onClick={addNode} className="btn-secondary btn-sm flex items-center gap-1">
-              <Plus className="h-3 w-3" />
-              Add Box
-            </button>
-            {selectedNode && (
-              <button
-                onClick={startArrowCreation}
-                disabled={!!creatingArrow}
-                className="btn-secondary btn-sm flex items-center gap-1 disabled:opacity-50"
-              >
-                <Plus className="h-3 w-3" />
-                Add Arrow From
-              </button>
-            )}
-            {(selectedNode || selectedArrow) && (
-              <button
-                onClick={deleteSelected}
-                className="btn-sm flex items-center gap-1 bg-red-100 text-red-700 hover:bg-red-200 rounded-lg px-3 py-1.5 text-sm font-medium"
-              >
-                <Trash2 className="h-3 w-3" />
-                Delete
-              </button>
-            )}
-            {creatingArrow && (
-              <div className="flex items-center gap-2 text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded">
-                Click target node to create arrow
-                <button onClick={() => setCreatingArrow(null)} className="hover:text-blue-800">
-                  <X className="h-3 w-3" />
-                </button>
-              </div>
-            )}
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-muted-foreground">Double-click to edit text</span>
-            <button onClick={handleReset} className="btn-secondary btn-sm flex items-center gap-1">
-              <RotateCcw className="h-3 w-3" />
-              Reset
-            </button>
-            <button
-              onClick={handleSave}
-              disabled={!hasChanges}
-              className={`btn-sm flex items-center gap-1 ${
-                hasChanges ? 'btn-primary' : 'btn-secondary opacity-50'
-              }`}
-            >
-              <Save className="h-3 w-3" />
-              Save
-            </button>
-          </div>
-        </div>
-
-        {/* Canvas */}
+        {/* Canvas - read-only */}
         <div className="p-4 overflow-auto" style={{ maxHeight: '500px' }}>
           <svg
             ref={svgRef}
             width={maxX}
             height={maxY}
-            onMouseMove={handleMouseMove}
-            onMouseUp={handleMouseUp}
-            onMouseLeave={handleMouseUp}
-            onClick={handleSvgClick}
-            style={{ cursor: dragging ? 'grabbing' : creatingArrow ? 'crosshair' : 'default' }}
           >
             <defs>
               <marker
@@ -524,16 +292,6 @@ export function FlowDiagram({ postings, txType, demoName, description }: Props) 
                 orient="auto"
               >
                 <polygon points="0 0, 10 3.5, 0 7" fill="#6b7280" />
-              </marker>
-              <marker
-                id="arrowhead-selected"
-                markerWidth="10"
-                markerHeight="7"
-                refX="9"
-                refY="3.5"
-                orient="auto"
-              >
-                <polygon points="0 0, 10 3.5, 0 7" fill="#3b82f6" />
               </marker>
             </defs>
 
@@ -555,6 +313,7 @@ export function FlowDiagram({ postings, txType, demoName, description }: Props) 
               let fromX: number, fromY: number, toX: number, toY: number;
 
               if (hasReverseArrow && sameLevel) {
+                // Bidirectional horizontal arrows - offset vertically
                 const fromIsLeft = fromNode.x < toNode.x;
                 const goingLeftToRight =
                   (fromIsLeft && fromNode.id === arrow.from) ||
@@ -584,6 +343,18 @@ export function FlowDiagram({ postings, txType, demoName, description }: Props) 
                   fromY = fromNode.y + nodeHeight / 2 + verticalOffset;
                   toY = toNode.y + nodeHeight / 2 + verticalOffset;
                 }
+              } else if (sameLevel) {
+                // Single horizontal arrow (sidecar pattern, one direction only)
+                const fromIsLeft = fromNode.x < toNode.x;
+                if (fromIsLeft) {
+                  fromX = fromNode.x + fromWidth;
+                  toX = toNode.x;
+                } else {
+                  fromX = fromNode.x;
+                  toX = toNode.x + toWidth;
+                }
+                fromY = fromNode.y + nodeHeight / 2;
+                toY = toNode.y + nodeHeight / 2;
               } else if (hasReverseArrow) {
                 const isForwardArrow = arrow.from < arrow.to;
                 const horizontalOffset = 20;
@@ -603,9 +374,6 @@ export function FlowDiagram({ postings, txType, demoName, description }: Props) 
 
               const midX = (fromX + toX) / 2;
               const midY = (fromY + toY) / 2;
-
-              const isSelected = selectedArrow === arrow.id;
-              const isEditing = editingArrow === arrow.id;
 
               const labelWidth = Math.max(45, arrow.label.length * 6.5 + 10);
               const labelHeight = 16;
@@ -632,66 +400,39 @@ export function FlowDiagram({ postings, txType, demoName, description }: Props) 
               }
 
               return (
-                <g
-                  key={arrow.id}
-                  onClick={(e) => handleArrowClick(arrow.id, e)}
-                  style={{ cursor: 'pointer' }}
-                >
+                <g key={arrow.id}>
                   <line
                     x1={fromX}
                     y1={fromY}
                     x2={toX - (isHorizontal ? 8 : 0)}
                     y2={toY - (isHorizontal ? 0 : 4)}
-                    stroke={isSelected ? '#3b82f6' : '#9ca3af'}
-                    strokeWidth={isSelected ? 2.5 : 1.5}
-                    markerEnd={isSelected ? 'url(#arrowhead-selected)' : 'url(#arrowhead)'}
+                    stroke="#9ca3af"
+                    strokeWidth={1.5}
+                    markerEnd="url(#arrowhead)"
                   />
-                  {isEditing ? (
-                    <foreignObject
+                  <g>
+                    <rect
                       x={labelX - labelWidth / 2}
                       y={labelY - labelHeight / 2}
-                      width={labelWidth + 4}
-                      height={labelHeight + 4}
+                      width={labelWidth}
+                      height={labelHeight}
+                      rx="3"
+                      fill="white"
+                      stroke="#d1fae5"
+                      strokeWidth="1"
+                    />
+                    <text
+                      x={labelX}
+                      y={labelY}
+                      textAnchor="middle"
+                      dominantBaseline="central"
+                      fontSize="10"
+                      fontWeight="600"
+                      fill="#059669"
                     >
-                      <input
-                        ref={inputRef}
-                        type="text"
-                        value={arrow.label}
-                        onChange={(e) => handleArrowLabelChange(arrow.id, e.target.value)}
-                        onKeyDown={handleEditKeyDown}
-                        onBlur={() => setEditingArrow(null)}
-                        className="w-full h-full text-center text-xs font-semibold bg-white border border-emerald-300 rounded outline-none"
-                        style={{ color: '#166534', fontSize: '10px' }}
-                      />
-                    </foreignObject>
-                  ) : (
-                    <g
-                      onDoubleClick={() => handleArrowDoubleClick(arrow.id)}
-                      style={{ cursor: 'pointer' }}
-                    >
-                      <rect
-                        x={labelX - labelWidth / 2}
-                        y={labelY - labelHeight / 2}
-                        width={labelWidth}
-                        height={labelHeight}
-                        rx="3"
-                        fill="white"
-                        stroke={isSelected ? '#3b82f6' : '#d1fae5'}
-                        strokeWidth="1"
-                      />
-                      <text
-                        x={labelX}
-                        y={labelY}
-                        textAnchor="middle"
-                        dominantBaseline="central"
-                        fontSize="10"
-                        fontWeight="600"
-                        fill={isSelected ? '#3b82f6' : '#059669'}
-                      >
-                        {arrow.label}
-                      </text>
-                    </g>
-                  )}
+                      {arrow.label}
+                    </text>
+                  </g>
                 </g>
               );
             })}
@@ -699,51 +440,31 @@ export function FlowDiagram({ postings, txType, demoName, description }: Props) 
             {/* Draw nodes */}
             {state.nodes.map((node) => {
               const isWorld = node.label === '@world';
-              const isSelected = selectedNode === node.id;
-              const isEditing = editingNode === node.id;
               const width = calcNodeWidth(node.label);
 
               return (
                 <g
                   key={node.id}
                   transform={`translate(${node.x}, ${node.y})`}
-                  onMouseDown={(e) => handleNodeMouseDown(node.id, e)}
-                  onDoubleClick={() => handleNodeDoubleClick(node.id)}
-                  style={{ cursor: dragging === node.id ? 'grabbing' : 'grab' }}
                 >
                   <rect
                     width={width}
                     height={nodeHeight}
                     rx="8"
-                    fill={isWorld ? '#f8fafc' : isSelected ? '#dbeafe' : '#eff6ff'}
-                    stroke={isSelected ? '#3b82f6' : isWorld ? '#94a3b8' : '#3b82f6'}
-                    strokeWidth={isSelected ? 3 : 2}
+                    fill={isWorld ? '#f8fafc' : '#eff6ff'}
+                    stroke={isWorld ? '#94a3b8' : '#3b82f6'}
+                    strokeWidth={2}
                   />
-                  {isEditing ? (
-                    <foreignObject x="4" y="8" width={width - 8} height={nodeHeight - 16}>
-                      <input
-                        ref={inputRef}
-                        type="text"
-                        value={node.label}
-                        onChange={(e) => handleNodeLabelChange(node.id, e.target.value)}
-                        onKeyDown={handleEditKeyDown}
-                        onBlur={() => setEditingNode(null)}
-                        className="w-full h-full text-center text-sm bg-transparent border-none outline-none font-mono"
-                        style={{ color: isWorld ? '#475569' : '#1e40af' }}
-                      />
-                    </foreignObject>
-                  ) : (
-                    <text
-                      x={width / 2}
-                      y={nodeHeight / 2 + 5}
-                      textAnchor="middle"
-                      fontSize="13"
-                      fontFamily="ui-monospace, monospace"
-                      fill={isWorld ? '#475569' : '#1e40af'}
-                    >
-                      {node.label}
-                    </text>
-                  )}
+                  <text
+                    x={width / 2}
+                    y={nodeHeight / 2 + 5}
+                    textAnchor="middle"
+                    fontSize="13"
+                    fontFamily="ui-monospace, monospace"
+                    fill={isWorld ? '#475569' : '#1e40af'}
+                  >
+                    {node.label}
+                  </text>
                 </g>
               );
             })}

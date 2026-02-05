@@ -35,6 +35,14 @@ Use realistic dollar/crypto amounts that make sense for the use case:
 - Institutional: $100,000, $1M, $10M
 - Crypto: 1 ETH, 10 ETH, 500 ETH, 10,000 USDC
 
+### Rule 4: EXCHANGE PATTERN FOR CONVERSIONS
+For any currency conversion, token mint/burn, or asset swap, the flow MUST use an exchange account with BIDIRECTIONAL @world flows:
+- Source asset: Customer → Exchange → @world
+- Target asset: @world → Exchange → Customer
+- Fee: Exchange → @platform:revenue
+
+This creates proper diagram visualization with horizontal arrows between exchange and @world.
+
 ## Guidelines
 
 1. **Design 4-8 transaction steps** that tell a compelling story
